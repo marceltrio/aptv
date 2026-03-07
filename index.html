@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AmigaOS Kernel Studio</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="os-shell">
+      <header class="menubar">
+        <div class="left-menu">
+          <button id="menuBtn" class="menu-btn">☰ System</button>
+          <span class="menu-item">Workbench</span>
+          <span class="menu-item">Tools</span>
+          <span class="menu-item">Prefs</span>
+        </div>
+        <div class="right-menu">
+          <span class="chip-indicator">CHIP + FAST</span>
+          <span id="clock" class="clock">00:00:00</span>
+        </div>
+      </header>
+
+      <main class="desktop">
+        <aside class="dock">
+          <button class="dock-icon" data-focus="kernelWindow">⚙️<span>Kernel</span></button>
+          <button class="dock-icon" data-focus="creatorWindow">🧩<span>Tasks</span></button>
+          <button class="dock-icon" data-focus="monitorWindow">📊<span>Monitor</span></button>
+          <button class="dock-icon" data-focus="shellWindow">⌨️<span>Shell</span></button>
+        </aside>
+
+        <section class="workspace">
+          <article class="window" id="kernelWindow">
+            <div class="titlebar">
+              <span>Kernel Control</span>
+              <div class="window-controls"><i></i><i></i><i></i></div>
+            </div>
+            <div class="window-content">
+              <p class="subtitle">Interfaz gráfica estilo AmigaOS para simular scheduler y memoria.</p>
+              <div class="control-grid">
+                <button id="bootBtn">Boot</button>
+                <button id="tickBtn" disabled>Tick</button>
+                <button id="autoTickBtn" disabled>Auto Tick</button>
+                <button id="ioBtn" disabled>I/O IRQ</button>
+                <button id="resetBtn">Reset</button>
+                <button id="clearLogBtn">Clear Log</button>
+              </div>
+              <ul id="kernelState" class="state-list"></ul>
+              <div class="metrics">
+                <div>
+                  <label>Memoria</label>
+                  <progress id="memBar" max="100" value="0"></progress>
+                </div>
+                <div>
+                  <label>CPU (último tick)</label>
+                  <progress id="cpuBar" max="100" value="0"></progress>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="window" id="creatorWindow">
+            <div class="titlebar">
+              <span>Task Creator</span>
+              <div class="window-controls"><i></i><i></i><i></i></div>
+            </div>
+            <div class="window-content">
+              <form id="processForm" class="form-grid">
+                <label>Nombre<input id="nameInput" type="text" placeholder="shell.task" maxlength="20" /></label>
+                <label>CPU<input id="cpuInput" type="number" min="1" max="60" value="8" /></label>
+                <label>Memoria (MB)<input id="memInput" type="number" min="4" max="512" value="64" /></label>
+                <label>Prioridad<input id="prioInput" type="number" min="1" max="10" value="5" /></label>
+                <div class="control-grid">
+                  <button id="spawnManualBtn" type="submit" disabled>Launch</button>
+                  <button id="spawnAutoBtn" type="button" disabled>Auto Task</button>
+                </div>
+              </form>
+            </div>
+          </article>
+
+          <article class="window" id="monitorWindow">
+            <div class="titlebar">
+              <span>Task Monitor</span>
+              <div class="window-controls"><i></i><i></i><i></i></div>
+            </div>
+            <div class="window-content">
+              <div id="queueView" class="queue-view"></div>
+              <table>
+                <thead>
+                  <tr>
+                    <th>PID</th>
+                    <th>Task</th>
+                    <th>Estado</th>
+                    <th>CPU</th>
+                    <th>Mem</th>
+                    <th>Prio</th>
+                    <th>I/O</th>
+                    <th>Acción</th>
+                  </tr>
+                </thead>
+                <tbody id="processTable"></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="window" id="shellWindow">
+            <div class="titlebar">
+              <span>Amiga Shell</span>
+              <div class="window-controls"><i></i><i></i><i></i></div>
+            </div>
+            <div class="window-content">
+              <pre id="log"></pre>
+            </div>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script src="kernel.js"></script>
+  </body>
+</html>
