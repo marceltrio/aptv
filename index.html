@@ -17,6 +17,11 @@
         </div>
         <div class="right-menu">
           <span class="chip-indicator">CHIP + FAST</span>
+          <select id="profileSelect" class="profile-select">
+            <option value="balanced">Perfil: Balanced</option>
+            <option value="performance">Perfil: Performance</option>
+            <option value="eco">Perfil: Eco</option>
+          </select>
           <span id="clock" class="clock">00:00:00</span>
         </div>
       </header>
@@ -26,44 +31,35 @@
           <button class="dock-icon" data-focus="kernelWindow">⚙️<span>Kernel</span></button>
           <button class="dock-icon" data-focus="creatorWindow">🧩<span>Tasks</span></button>
           <button class="dock-icon" data-focus="monitorWindow">📊<span>Monitor</span></button>
+          <button class="dock-icon" data-focus="fsWindow">💾<span>Files</span></button>
           <button class="dock-icon" data-focus="shellWindow">⌨️<span>Shell</span></button>
         </aside>
 
         <section class="workspace">
           <article class="window" id="kernelWindow">
-            <div class="titlebar">
-              <span>Kernel Control</span>
-              <div class="window-controls"><i></i><i></i><i></i></div>
-            </div>
+            <div class="titlebar"><span>Kernel Control</span><div class="window-controls"><i></i><i></i><i></i></div></div>
             <div class="window-content">
-              <p class="subtitle">Interfaz gráfica estilo AmigaOS para simular scheduler y memoria.</p>
+              <p class="subtitle">Kernel con perfiles de rendimiento, snapshot y telemetría.</p>
               <div class="control-grid">
                 <button id="bootBtn">Boot</button>
                 <button id="tickBtn" disabled>Tick</button>
                 <button id="autoTickBtn" disabled>Auto Tick</button>
                 <button id="ioBtn" disabled>I/O IRQ</button>
+                <button id="saveBtn" disabled>Save State</button>
+                <button id="loadBtn">Load State</button>
                 <button id="resetBtn">Reset</button>
                 <button id="clearLogBtn">Clear Log</button>
               </div>
               <ul id="kernelState" class="state-list"></ul>
               <div class="metrics">
-                <div>
-                  <label>Memoria</label>
-                  <progress id="memBar" max="100" value="0"></progress>
-                </div>
-                <div>
-                  <label>CPU (último tick)</label>
-                  <progress id="cpuBar" max="100" value="0"></progress>
-                </div>
+                <div><label>Memoria</label><progress id="memBar" max="100" value="0"></progress></div>
+                <div><label>CPU (último tick)</label><progress id="cpuBar" max="100" value="0"></progress></div>
               </div>
             </div>
           </article>
 
           <article class="window" id="creatorWindow">
-            <div class="titlebar">
-              <span>Task Creator</span>
-              <div class="window-controls"><i></i><i></i><i></i></div>
-            </div>
+            <div class="titlebar"><span>Task Creator</span><div class="window-controls"><i></i><i></i><i></i></div></div>
             <div class="window-content">
               <form id="processForm" class="form-grid">
                 <label>Nombre<input id="nameInput" type="text" placeholder="shell.task" maxlength="20" /></label>
@@ -79,37 +75,39 @@
           </article>
 
           <article class="window" id="monitorWindow">
-            <div class="titlebar">
-              <span>Task Monitor</span>
-              <div class="window-controls"><i></i><i></i><i></i></div>
-            </div>
+            <div class="titlebar"><span>Task Monitor</span><div class="window-controls"><i></i><i></i><i></i></div></div>
             <div class="window-content">
               <div id="queueView" class="queue-view"></div>
               <table>
-                <thead>
-                  <tr>
-                    <th>PID</th>
-                    <th>Task</th>
-                    <th>Estado</th>
-                    <th>CPU</th>
-                    <th>Mem</th>
-                    <th>Prio</th>
-                    <th>I/O</th>
-                    <th>Acción</th>
-                  </tr>
-                </thead>
+                <thead><tr><th>PID</th><th>Task</th><th>Estado</th><th>CPU</th><th>Mem</th><th>Prio</th><th>I/O</th><th>Acción</th></tr></thead>
                 <tbody id="processTable"></tbody>
               </table>
             </div>
           </article>
 
-          <article class="window" id="shellWindow">
-            <div class="titlebar">
-              <span>Amiga Shell</span>
-              <div class="window-controls"><i></i><i></i><i></i></div>
+          <article class="window" id="fsWindow">
+            <div class="titlebar"><span>Virtual FileSystem</span><div class="window-controls"><i></i><i></i><i></i></div></div>
+            <div class="window-content">
+              <form id="fileForm" class="form-grid">
+                <label>Archivo<input id="fileNameInput" type="text" placeholder="notes.txt" maxlength="40" /></label>
+                <label>Contenido<input id="fileContentInput" type="text" placeholder="hola amiga" maxlength="120" /></label>
+                <div class="control-grid">
+                  <button id="createFileBtn" type="submit" disabled>Write File</button>
+                  <button id="refreshFsBtn" type="button">Refresh</button>
+                </div>
+              </form>
+              <ul id="fileList" class="file-list"></ul>
             </div>
+          </article>
+
+          <article class="window" id="shellWindow">
+            <div class="titlebar"><span>Amiga Shell</span><div class="window-controls"><i></i><i></i><i></i></div></div>
             <div class="window-content">
               <pre id="log"></pre>
+              <form id="commandForm" class="command-row">
+                <input id="commandInput" type="text" placeholder="help | ps | ls | cat notes.txt | kill 2" />
+                <button id="runCmdBtn" type="submit">Run</button>
+              </form>
             </div>
           </article>
         </section>

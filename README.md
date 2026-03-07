@@ -1,46 +1,49 @@
-# AmigaOS Kernel Studio (simulador)
+# AmigaOS Kernel Studio (simulador avanzado)
 
-Simulador web del kernel con una **interfaz gráfica tipo escritorio** inspirada en AmigaOS.
+Simulador web del kernel con interfaz gráfica estilo AmigaOS, ahora con módulos extra de sistema operativo para práctica realista.
 
-## Mejoras principales
+## Novedades (muchas mejoras)
 
-- Escritorio gráfico con barra superior, dock lateral y ventanas de trabajo.
-- Panel de control del kernel con Boot, Tick, Auto Tick, I/O IRQ, Reset y limpieza de log.
-- Creador de tareas manual y automático.
-- Monitor visual de cola `READY` + tabla de procesos.
-- Barras de progreso para memoria y uso de CPU del último tick.
-- Scheduler Round Robin con prioridad, bloqueo por I/O y gestión de memoria.
-- **Soporte de ejecución local en PC real de 64 bits** (Windows, Linux, macOS) con Node.js.
+- Escritorio gráfico completo: menubar, dock, ventanas y navegación por foco.
+- Scheduler Round Robin con prioridades, I/O blocking y métricas de CPU/memoria.
+- Perfiles de sistema: `eco`, `balanced`, `performance` (cambian quantum y memoria total).
+- Auto Tick para simulación continua.
+- **Virtual FileSystem** con creación, lectura, borrado y listado de archivos.
+- Shell interactiva con comandos:
+  - `help`, `ps`, `tick`, `io`, `kill <pid>`
+  - `profile <eco|balanced|performance>`
+  - `ls`, `cat <file>`, `write <file> <texto>`, `rm <file>`
+  - `save`, `load`
+- Persistencia local: guardar/cargar snapshot en `localStorage`.
+- Pruebas automáticas extendidas del kernel (scheduler + FS + snapshots + parser de comandos).
 
-## Requisitos para PC 64 bits
+## Requisitos para PC real 64 bits
 
-- Node.js 18+ de 64 bits.
-- Navegador moderno (Chrome, Edge, Firefox).
+- Node.js 18+ (x64)
+- Navegador moderno (Chrome, Edge, Firefox)
 
-## Ejecutar en una PC real (64 bits)
+## Ejecutar en una PC de 64 bits
 
 ```bash
 npm start
 ```
 
-Después abre:
+Abre:
 
 ```text
 http://localhost:8000
 ```
 
-> También puedes usar `python3 -m http.server 8000`, pero `npm start` ya incluye servidor local propio (`server.js`).
-
-## Pruebas automáticas
+## Pruebas
 
 ```bash
 npm test
 ```
 
-## Archivos
+## Archivos principales
 
-- `index.html`: estructura de la interfaz gráfica.
-- `styles.css`: tema visual tipo AmigaOS.
-- `kernel.js`: simulación del kernel y lógica de UI.
-- `server.js`: servidor HTTP estático para ejecución local en 64 bits.
-- `kernel.test.js`: pruebas automáticas del kernel con `node:test`.
+- `index.html`: interfaz gráfica del sistema.
+- `styles.css`: tema visual AmigaOS y layout responsive.
+- `kernel.js`: núcleo del simulador + shell + filesystem + snapshot.
+- `server.js`: servidor HTTP local para ejecutar en x64.
+- `kernel.test.js`: suite de pruebas con `node:test`.
