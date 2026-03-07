@@ -31,6 +31,8 @@
           <button class="dock-icon" data-focus="kernelWindow">⚙️<span>Kernel</span></button>
           <button class="dock-icon" data-focus="creatorWindow">🧩<span>Tasks</span></button>
           <button class="dock-icon" data-focus="monitorWindow">📊<span>Monitor</span></button>
+          <button class="dock-icon" data-focus="sessionWindow">👤<span>Session</span></button>
+          <button class="dock-icon" data-focus="appsWindow">📦<span>Apps</span></button>
           <button class="dock-icon" data-focus="fsWindow">💾<span>Files</span></button>
           <button class="dock-icon" data-focus="shellWindow">⌨️<span>Shell</span></button>
         </aside>
@@ -39,7 +41,7 @@
           <article class="window" id="kernelWindow">
             <div class="titlebar"><span>Kernel Control</span><div class="window-controls"><i></i><i></i><i></i></div></div>
             <div class="window-content">
-              <p class="subtitle">Kernel con perfiles de rendimiento, snapshot y telemetría.</p>
+              <p class="subtitle">Kernel con perfiles, snapshot, red simulada y diagnósticos.</p>
               <div class="control-grid">
                 <button id="bootBtn">Boot</button>
                 <button id="tickBtn" disabled>Tick</button>
@@ -47,6 +49,7 @@
                 <button id="ioBtn" disabled>I/O IRQ</button>
                 <button id="saveBtn" disabled>Save State</button>
                 <button id="loadBtn">Load State</button>
+                <button id="diagBtn" disabled>Export Diag</button>
                 <button id="resetBtn">Reset</button>
                 <button id="clearLogBtn">Clear Log</button>
               </div>
@@ -54,6 +57,7 @@
               <div class="metrics">
                 <div><label>Memoria</label><progress id="memBar" max="100" value="0"></progress></div>
                 <div><label>CPU (último tick)</label><progress id="cpuBar" max="100" value="0"></progress></div>
+                <div><label>Net load</label><progress id="netBar" max="100" value="0"></progress></div>
               </div>
             </div>
           </article>
@@ -75,13 +79,39 @@
           </article>
 
           <article class="window" id="monitorWindow">
-            <div class="titlebar"><span>Task Monitor</span><div class="window-controls"><i></i><i></i><i></i></div></div>
+            <div class="titlebar"><span>Task & Network Monitor</span><div class="window-controls"><i></i><i></i><i></i></div></div>
             <div class="window-content">
               <div id="queueView" class="queue-view"></div>
+              <p id="networkStats" class="mini-status"></p>
               <table>
                 <thead><tr><th>PID</th><th>Task</th><th>Estado</th><th>CPU</th><th>Mem</th><th>Prio</th><th>I/O</th><th>Acción</th></tr></thead>
                 <tbody id="processTable"></tbody>
               </table>
+            </div>
+          </article>
+
+          <article class="window" id="sessionWindow">
+            <div class="titlebar"><span>Users & Session</span><div class="window-controls"><i></i><i></i><i></i></div></div>
+            <div class="window-content">
+              <form id="loginForm" class="command-row">
+                <input id="loginInput" type="text" placeholder="nombre de usuario" />
+                <button id="loginBtn" type="submit">Login</button>
+              </form>
+              <div class="control-grid">
+                <button id="logoutBtn" disabled>Logout</button>
+              </div>
+              <p id="sessionInfo" class="mini-status"></p>
+            </div>
+          </article>
+
+          <article class="window" id="appsWindow">
+            <div class="titlebar"><span>App Manager</span><div class="window-controls"><i></i><i></i><i></i></div></div>
+            <div class="window-content">
+              <form id="appForm" class="command-row">
+                <input id="appInput" type="text" placeholder="paint.app" />
+                <button id="installAppBtn" type="submit" disabled>Install</button>
+              </form>
+              <ul id="appsList" class="file-list"></ul>
             </div>
           </article>
 
@@ -105,7 +135,7 @@
             <div class="window-content">
               <pre id="log"></pre>
               <form id="commandForm" class="command-row">
-                <input id="commandInput" type="text" placeholder="help | ps | ls | cat notes.txt | kill 2" />
+                <input id="commandInput" type="text" placeholder="help | ps | whoami | apps | install paint.app" />
                 <button id="runCmdBtn" type="submit">Run</button>
               </form>
             </div>

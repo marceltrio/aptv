@@ -1,21 +1,27 @@
 # AmigaOS Kernel Studio (simulador avanzado)
 
-Simulador web del kernel con interfaz gráfica estilo AmigaOS, ahora con módulos extra de sistema operativo para práctica realista.
+Simulador web del kernel con interfaz gráfica estilo AmigaOS, ahora con más módulos de sistema operativo para práctica realista en PC 64 bits.
 
-## Novedades (muchas mejoras)
+## Mejoras nuevas del sistema operativo
 
-- Escritorio gráfico completo: menubar, dock, ventanas y navegación por foco.
-- Scheduler Round Robin con prioridades, I/O blocking y métricas de CPU/memoria.
-- Perfiles de sistema: `eco`, `balanced`, `performance` (cambian quantum y memoria total).
-- Auto Tick para simulación continua.
-- **Virtual FileSystem** con creación, lectura, borrado y listado de archivos.
-- Shell interactiva con comandos:
-  - `help`, `ps`, `tick`, `io`, `kill <pid>`
-  - `profile <eco|balanced|performance>`
-  - `ls`, `cat <file>`, `write <file> <texto>`, `rm <file>`
-  - `save`, `load`
-- Persistencia local: guardar/cargar snapshot en `localStorage`.
-- Pruebas automáticas extendidas del kernel (scheduler + FS + snapshots + parser de comandos).
+- Escritorio gráfico completo con menubar, dock y ventanas especializadas.
+- Scheduler Round Robin con prioridad, bloqueo por I/O y telemetría de CPU/memoria.
+- Red simulada con paquetes enviados, perdidos, carga y tasa de pérdida.
+- Perfiles del sistema: `eco`, `balanced`, `performance` (ajustan quantum + memoria).
+- Gestión de sesión y usuarios (`login/logout`, `whoami`).
+- App Manager con instalación/listado de aplicaciones virtuales.
+- Virtual FileSystem con creación, lectura, borrado y listado de archivos.
+- Shell integrada con comandos administrativos y operativos.
+- Snapshot completo del sistema (`save/load`) y exportación de diagnóstico JSON.
+
+## Comandos de Shell
+
+- `help`, `ps`, `tick`, `io`, `kill <pid>`
+- `profile <eco|balanced|performance>`
+- `whoami`, `login <usuario>`, `logout`
+- `apps`, `install <app>`
+- `ls`, `cat <file>`, `write <file> <texto>`, `rm <file>`
+- `save`, `load`
 
 ## Requisitos para PC real 64 bits
 
@@ -42,8 +48,8 @@ npm test
 
 ## Archivos principales
 
-- `index.html`: interfaz gráfica del sistema.
+- `index.html`: interfaz gráfica del sistema operativo.
 - `styles.css`: tema visual AmigaOS y layout responsive.
-- `kernel.js`: núcleo del simulador + shell + filesystem + snapshot.
+- `kernel.js`: núcleo del simulador (scheduler + red + shell + FS + usuarios + apps + snapshot).
 - `server.js`: servidor HTTP local para ejecutar en x64.
 - `kernel.test.js`: suite de pruebas con `node:test`.
