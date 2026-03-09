@@ -1,0 +1,16 @@
+{
+  "name": "amigaos-kernel-studio",
+  "version": "1.0.0",
+  "description": "Simulador de kernel estilo AmigaOS con interfaz web y ejecución local en PCs de 64 bits",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "compile": "node --check kernel.js && node --check server.js",
+    "test": "node --test kernel.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}
