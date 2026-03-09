@@ -14,6 +14,8 @@ Simulador web del kernel con interfaz gráfica estilo AmigaOS, ahora con más m�
 - Shell integrada con comandos administrativos y operativos.
 - Snapshot completo del sistema (`save/load`) y exportación de diagnóstico JSON.
 
+- Mejoras visuales estilo AmigaOS: selector de temas (`Ocean`, `Purple`, `Graphite`), efecto CRT scanlines, glow retro y modo cascade de ventanas.
+
 ## Comandos de Shell
 
 - `help`, `ps`, `tick`, `io`, `kill <pid>`

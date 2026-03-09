@@ -22,6 +22,11 @@
             <option value="performance">Perfil: Performance</option>
             <option value="eco">Perfil: Eco</option>
           </select>
+          <select id="themeSelect" class="profile-select">
+            <option value="ocean">Theme: Ocean</option>
+            <option value="purple">Theme: Purple</option>
+            <option value="graphite">Theme: Graphite</option>
+          </select>
           <span id="clock" class="clock">00:00:00</span>
         </div>
       </header>
@@ -127,6 +132,19 @@
                 </div>
               </form>
               <ul id="fileList" class="file-list"></ul>
+            </div>
+          </article>
+
+
+          <article class="window" id="visualWindow">
+            <div class="titlebar"><span>Workbench Visual</span><div class="window-controls"><i></i><i></i><i></i></div></div>
+            <div class="window-content">
+              <div class="control-grid">
+                <button id="toggleScanBtn">CRT Scanlines</button>
+                <button id="toggleGlowBtn">Neon Glow</button>
+                <button id="cascadeBtn">Cascade Windows</button>
+              </div>
+              <p class="mini-status">Ajusta el look retro AmigaOS del escritorio.</p>
             </div>
           </article>
 

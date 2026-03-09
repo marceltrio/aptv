@@ -373,10 +373,18 @@ function bootstrapUI() {
   const buttonIds = [
     "bootBtn", "tickBtn", "autoTickBtn", "ioBtn", "saveBtn", "loadBtn", "diagBtn", "resetBtn", "clearLogBtn",
     "spawnManualBtn", "spawnAutoBtn", "createFileBtn", "installAppBtn", "logoutBtn",
+    "toggleScanBtn", "toggleGlowBtn", "cascadeBtn",
   ];
   const buttons = Object.fromEntries(buttonIds.map((id) => [id, el(id)]));
 
   let autoTickTimer = null;
+  const body = document.body;
+
+  function applyTheme(theme) {
+    body.classList.remove("theme-purple", "theme-graphite");
+    if (theme === "purple") body.classList.add("theme-purple");
+    if (theme === "graphite") body.classList.add("theme-graphite");
+  }
 
   function writeLog(message) {
     const timestamp = new Date().toLocaleTimeString();
@@ -445,6 +453,21 @@ function bootstrapUI() {
     }
   }
 
+  function cascadeWindows() {
+    const windows = Array.from(document.querySelectorAll(".workspace .window"));
+    windows.forEach((w, i) => {
+      w.style.transform = `translate(${(i % 4) * 6}px, ${(i % 4) * 6}px)`;
+      w.style.zIndex = String(10 + i);
+    });
+    setTimeout(() => {
+      windows.forEach((w) => {
+        w.style.transform = "";
+        w.style.zIndex = "";
+      });
+    }, 900);
+    writeLog("SYS: cascade visual aplicado.");
+  }
+
   function exportDiagnostics() {
     const report = JSON.stringify(kernel.diagnosticsReport(), null, 2);
     if (typeof Blob === "undefined") {
@@ -460,7 +483,16 @@ function bootstrapUI() {
     writeLog("SYS: diagnóstico exportado.");
   }
 
-  el("profileSelect").addEventListener("change", (e) => { writeLog(kernel.setProfile(e.target.value)); render(); });
+  el("profileSelect").addEventListener("change", (e) => {
+    const val = e.target.value;
+    writeLog(kernel.setProfile(val));
+    applyTheme(val === "eco" ? "graphite" : val === "performance" ? "purple" : "ocean");
+    render();
+  });
+  el("themeSelect").addEventListener("change", (e) => applyTheme(e.target.value));
+  buttons.toggleScanBtn.addEventListener("click", () => body.classList.toggle("scanlines"));
+  buttons.toggleGlowBtn.addEventListener("click", () => body.classList.toggle("neon"));
+  buttons.cascadeBtn.addEventListener("click", cascadeWindows);
   buttons.bootBtn.addEventListener("click", () => { writeLog(kernel.boot()); render(); });
   buttons.tickBtn.addEventListener("click", () => { writeLog(kernel.tick()); render(); });
   buttons.autoTickBtn.addEventListener("click", () => setAutoTick(!autoTickTimer));
@@ -528,6 +560,7 @@ function bootstrapUI() {
 
   setInterval(() => { el("clock").textContent = new Date().toLocaleTimeString(); }, 1000);
   el("clock").textContent = new Date().toLocaleTimeString();
+  applyTheme("ocean");
   render();
   writeLog("SYS: AmigaOS Kernel Studio listo. Escribe 'help' en shell.");
 }
