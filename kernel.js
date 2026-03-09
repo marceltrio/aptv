@@ -8,6 +8,8 @@ class OnlineKernel {
     this.apps = [];
     this.files = [];
     this.network = { packetsSent: 0, packetsDropped: 0, load: 0 };
+    this.notifications = [];
+    this.benchmarkHistory = [];
     this.reset();
   }
 
@@ -16,6 +18,7 @@ class OnlineKernel {
     this.booted = true;
     this.clock = 1;
     this.currentUser = this.currentUser || "admin";
+
     if (!this.files.length) {
       this.createFile("readme.txt", "Bienvenido a AmigaOS Kernel Studio");
       this.createFile("syslog.txt", "Sistema inicializado.");
@@ -24,6 +27,7 @@ class OnlineKernel {
       this.installApp("shell.app");
       this.installApp("monitor.app");
     }
+    this.notify("Kernel iniciado", "ok");
     return "SYS: Kickstart cargado. Workbench activo.";
   }
 
@@ -41,6 +45,16 @@ class OnlineKernel {
     return "SYS: Reinicio completo.";
   }
 
+  notify(message, level = "warn") {
+    this.notifications.unshift({ message, level, at: this.clock });
+    this.notifications = this.notifications.slice(0, 8);
+  }
+
+  clearNotifications() {
+    this.notifications = [];
+    return "SYS: notificaciones limpiadas.";
+  }
+
   setProfile(profile) {
     const map = {
       eco: { quantum: 1, memoryTotal: 1024 },
@@ -52,16 +66,16 @@ class OnlineKernel {
     this.profile = profile;
     this.quantum = cfg.quantum;
     this.memoryTotal = Math.max(cfg.memoryTotal, this.memoryUsed || 0);
+    this.notify(`Perfil cambiado a ${profile}`, "ok");
     return `SYS: perfil aplicado '${profile}' (Q=${this.quantum}, MEM=${this.memoryTotal}MB).`;
   }
 
   login(user) {
     const safe = String(user || "").trim();
     if (!safe) return "ERR: usuario vacío.";
-    if (!this.users.includes(safe)) {
-      this.users.push(safe);
-    }
+    if (!this.users.includes(safe)) this.users.push(safe);
     this.currentUser = safe;
+    this.notify(`Login de ${safe}`, "ok");
     return `AUTH: sesión iniciada como ${safe}.`;
   }
 
@@ -69,6 +83,7 @@ class OnlineKernel {
     if (!this.currentUser) return "AUTH: no hay sesión activa.";
     const previous = this.currentUser;
     this.currentUser = null;
+    this.notify(`Logout de ${previous}`);
     return `AUTH: sesión cerrada (${previous}).`;
   }
 
@@ -77,6 +92,7 @@ class OnlineKernel {
 
     const mem = this.clamp(spec.mem ?? this.random(16, 256), 4, 512);
     if (this.memoryUsed + mem > this.memoryTotal) {
+      this.notify("Memoria insuficiente", "warn");
       return `ERR: memoria CHIP/FAST insuficiente (${mem}MB).`;
     }
 
@@ -93,6 +109,7 @@ class OnlineKernel {
       blockedFor: 0,
       owner: this.currentUser || "system",
       createdAt: this.clock,
+      cpuUsed: 0,
     };
 
     this.processes.push(process);
@@ -109,6 +126,7 @@ class OnlineKernel {
     proc.blockedFor = 0;
     this.memoryUsed -= proc.mem;
     this.completedCount += 1;
+    this.notify(`Proceso ${pid} terminado`, "warn");
     return `TASK: PID ${pid} finalizado por usuario.`;
   }
 
@@ -143,6 +161,7 @@ class OnlineKernel {
 
     const runCycles = Math.min(this.quantum, proc.cpuLeft);
     proc.cpuLeft -= runCycles;
+    proc.cpuUsed += runCycles;
     this.lastCpuUsage = Math.round((runCycles / this.quantum) * 100);
 
     if (proc.cpuLeft <= 0) {
@@ -156,6 +175,21 @@ class OnlineKernel {
     proc.state = "READY";
     this.roundRobinIndex += 1;
     return `CPU: PID ${proc.pid} ejecutó ${runCycles}, restante ${proc.cpuLeft}.`;
+  }
+
+  benchmark(cycles = 10) {
+    if (!this.booted) return "ERR: kernel inactivo.";
+    const n = this.clamp(Number(cycles) || 10, 1, 200);
+    let busy = 0;
+    for (let i = 0; i < n; i += 1) {
+      const result = this.tick();
+      if (!result.includes("idle")) busy += 1;
+    }
+    const score = Math.round((busy / n) * 100);
+    this.benchmarkHistory.unshift({ at: this.clock, cycles: n, score });
+    this.benchmarkHistory = this.benchmarkHistory.slice(0, 10);
+    this.notify(`Benchmark ${score}% (${n} ciclos)`, score >= 60 ? "ok" : "warn");
+    return `BENCH: score=${score}% busy en ${n} ciclos.`;
   }
 
   networkTick() {
@@ -178,9 +212,14 @@ class OnlineKernel {
   }
 
   getReadyQueue() {
-    return this.processes
-      .filter((p) => p.state === "READY")
-      .sort((a, b) => b.priority - a.priority || a.pid - b.pid);
+    return this.processes.filter((p) => p.state === "READY").sort((a, b) => b.priority - a.priority || a.pid - b.pid);
+  }
+
+  getTopProcesses(limit = 5) {
+    return [...this.processes]
+      .filter((p) => p.state !== "TERMINATED")
+      .sort((a, b) => b.cpuUsed - a.cpuUsed || b.priority - a.priority)
+      .slice(0, limit);
   }
 
   installApp(name) {
@@ -231,17 +270,13 @@ class OnlineKernel {
       booted: state.booted,
       clock: state.clock,
       memory: `${state.memoryUsed}/${state.memoryTotal}`,
-      processSummary: {
-        ready: state.ready,
-        blocked: state.blocked,
-        running: state.running,
-        terminated: state.terminated,
-      },
+      processSummary: { ready: state.ready, blocked: state.blocked, running: state.running, terminated: state.terminated },
       network: state.network,
       currentUser: state.currentUser,
       users: state.users,
       apps: state.apps,
       files: state.files.map((f) => f.name),
+      benchmarkHistory: state.benchmarkHistory,
     };
   }
 
@@ -260,6 +295,8 @@ class OnlineKernel {
       currentUser: this.currentUser,
       apps: this.apps,
       network: this.network,
+      benchmarkHistory: this.benchmarkHistory,
+      notifications: this.notifications,
     });
   }
 
@@ -279,6 +316,8 @@ class OnlineKernel {
       this.currentUser = data.currentUser || null;
       this.apps = Array.isArray(data.apps) ? data.apps : [];
       this.network = data.network || { packetsSent: 0, packetsDropped: 0, load: 0 };
+      this.benchmarkHistory = Array.isArray(data.benchmarkHistory) ? data.benchmarkHistory : [];
+      this.notifications = Array.isArray(data.notifications) ? data.notifications : [];
       this.memoryUsed = this.processes.filter((p) => p.state !== "TERMINATED").reduce((sum, p) => sum + p.mem, 0);
       return "SYS: snapshot cargado correctamente.";
     } catch {
@@ -290,10 +329,14 @@ class OnlineKernel {
     const [cmd, ...args] = String(input || "").trim().split(/\s+/);
     if (!cmd) return "";
 
-    if (cmd === "help") return "help, ps, tick, io, kill <pid>, profile <eco|balanced|performance>, whoami, login <user>, logout, apps, install <app>, ls, cat <file>, write <file> <txt>, rm <file>, save, load";
+    if (cmd === "help") return "help, ps, top, bench <n>, tick, io, netstat, uptime, kill <pid>, profile <eco|balanced|performance>, whoami, login <user>, logout, apps, install <app>, ls, cat <file>, write <file> <txt>, rm <file>, alerts-clear, save, load";
     if (cmd === "ps") return this.processes.map((p) => `PID ${p.pid} ${p.name} ${p.state} CPU=${p.cpuLeft}`).join(" | ") || "sin procesos";
+    if (cmd === "top") return this.getTopProcesses().map((p) => `${p.name}(PID${p.pid}) cpuUsed=${p.cpuUsed}`).join(" | ") || "sin procesos";
+    if (cmd === "bench") return this.benchmark(Number(args[0] || 10));
     if (cmd === "tick") return this.tick();
     if (cmd === "io") return this.triggerIOInterrupt();
+    if (cmd === "netstat") return `sent=${this.network.packetsSent} drop=${this.network.packetsDropped} load=${this.network.load}%`;
+    if (cmd === "uptime") return `uptime ticks=${this.clock}`;
     if (cmd === "kill") return this.killProcess(Number(args[0]));
     if (cmd === "profile") return this.setProfile(args[0]);
     if (cmd === "whoami") return this.currentUser || "sin sesión";
@@ -305,6 +348,7 @@ class OnlineKernel {
     if (cmd === "cat") return this.readFile(args[0]);
     if (cmd === "write") return this.createFile(args[0], args.slice(1).join(" "));
     if (cmd === "rm") return this.deleteFile(args[0]);
+    if (cmd === "alerts-clear") return this.clearNotifications();
     if (cmd === "save") return this.saveSnapshot();
     if (cmd === "load") return this.loadSnapshot(args.join(" "));
     return `ERR: comando desconocido '${cmd}'.`;
@@ -335,10 +379,10 @@ class OnlineKernel {
       users: this.users,
       currentUser: this.currentUser,
       apps: this.apps,
-      network: {
-        ...this.network,
-        dropRate: Math.round((this.network.packetsDropped / packetsTotal) * 100),
-      },
+      notifications: this.notifications,
+      benchmarkHistory: this.benchmarkHistory,
+      topProcesses: this.getTopProcesses(),
+      network: { ...this.network, dropRate: Math.round((this.network.packetsDropped / packetsTotal) * 100) },
     };
   }
 
@@ -360,25 +404,28 @@ function bootstrapUI() {
 
   const kernel = new OnlineKernel();
   const el = (id) => document.getElementById(id);
+  const body = document.body;
   const logEl = el("log");
+
   const processTable = el("processTable");
   const kernelState = el("kernelState");
   const queueView = el("queueView");
   const fileList = el("fileList");
   const appsList = el("appsList");
+  const topList = el("topList");
   const memBar = el("memBar");
   const cpuBar = el("cpuBar");
   const netBar = el("netBar");
+  const notificationList = el("notificationList");
 
   const buttonIds = [
-    "bootBtn", "tickBtn", "autoTickBtn", "ioBtn", "saveBtn", "loadBtn", "diagBtn", "resetBtn", "clearLogBtn",
+    "bootBtn", "tickBtn", "autoTickBtn", "ioBtn", "benchBtn", "saveBtn", "loadBtn", "diagBtn", "resetBtn", "clearLogBtn",
     "spawnManualBtn", "spawnAutoBtn", "createFileBtn", "installAppBtn", "logoutBtn",
     "toggleScanBtn", "toggleGlowBtn", "cascadeBtn",
   ];
   const buttons = Object.fromEntries(buttonIds.map((id) => [id, el(id)]));
 
   let autoTickTimer = null;
-  const body = document.body;
 
   function applyTheme(theme) {
     body.classList.remove("theme-purple", "theme-graphite");
@@ -398,13 +445,25 @@ function bootstrapUI() {
   }
 
   function renderFiles(files) {
-    fileList.innerHTML = files.length
-      ? files.map((f) => `<li><strong>${f.name}</strong> - ${f.content.slice(0, 36)}</li>`).join("")
-      : "<li>Sin archivos</li>";
+    fileList.innerHTML = files.length ? files.map((f) => `<li><strong>${f.name}</strong> - ${f.content.slice(0, 36)}</li>`).join("") : "<li>Sin archivos</li>";
   }
 
   function renderApps(apps) {
     appsList.innerHTML = apps.length ? apps.map((a) => `<li>${a}</li>`).join("") : "<li>Sin apps</li>";
+  }
+
+  function renderInsights(state) {
+    const lastBench = state.benchmarkHistory[0] ? `${state.benchmarkHistory[0].score}%` : "n/a";
+    el("insightsSummary").textContent = `Uptime=${state.clock} ticks | Bench=${lastBench} | Activos=${state.activeCount} | DropRate=${state.network.dropRate}%`;
+    topList.innerHTML = state.topProcesses.length
+      ? state.topProcesses.map((p) => `<li>${p.name} (PID ${p.pid}) cpuUsed=${p.cpuUsed} owner=${p.owner}</li>`).join("")
+      : "<li>Sin procesos activos</li>";
+  }
+
+  function renderNotifications(list) {
+    notificationList.innerHTML = list.length
+      ? list.map((n) => `<li class="${n.level === "ok" ? "ok" : "warn"}">${n.message}</li>`).join("")
+      : "<li>Sin alertas</li>";
   }
 
   function render() {
@@ -430,12 +489,14 @@ function bootstrapUI() {
     renderQueue(s.readyQueue);
     renderFiles(s.files);
     renderApps(s.apps);
+    renderInsights(s);
+    renderNotifications(s.notifications);
 
     processTable.innerHTML = kernel.processes
       .map((p) => `<tr><td>${p.pid}</td><td>${p.name}</td><td>${p.state}</td><td>${Math.max(0, p.cpuLeft)}</td><td>${p.mem}MB</td><td>${p.priority}</td><td>${p.blockedFor || "-"}</td><td><button data-kill="${p.pid}" ${p.state === "TERMINATED" ? "disabled" : ""}>Kill</button></td></tr>`)
       .join("");
 
-    ["tickBtn", "autoTickBtn", "ioBtn", "saveBtn", "diagBtn", "spawnManualBtn", "spawnAutoBtn", "createFileBtn", "installAppBtn"].forEach((id) => {
+    ["tickBtn", "autoTickBtn", "ioBtn", "benchBtn", "saveBtn", "diagBtn", "spawnManualBtn", "spawnAutoBtn", "createFileBtn", "installAppBtn"].forEach((id) => {
       buttons[id].disabled = !s.booted;
     });
     buttons.logoutBtn.disabled = !s.currentUser;
@@ -459,12 +520,7 @@ function bootstrapUI() {
       w.style.transform = `translate(${(i % 4) * 6}px, ${(i % 4) * 6}px)`;
       w.style.zIndex = String(10 + i);
     });
-    setTimeout(() => {
-      windows.forEach((w) => {
-        w.style.transform = "";
-        w.style.zIndex = "";
-      });
-    }, 900);
+    setTimeout(() => windows.forEach((w) => { w.style.transform = ""; w.style.zIndex = ""; }), 900);
     writeLog("SYS: cascade visual aplicado.");
   }
 
@@ -490,17 +546,24 @@ function bootstrapUI() {
     render();
   });
   el("themeSelect").addEventListener("change", (e) => applyTheme(e.target.value));
+
   buttons.toggleScanBtn.addEventListener("click", () => body.classList.toggle("scanlines"));
   buttons.toggleGlowBtn.addEventListener("click", () => body.classList.toggle("neon"));
   buttons.cascadeBtn.addEventListener("click", cascadeWindows);
+
   buttons.bootBtn.addEventListener("click", () => { writeLog(kernel.boot()); render(); });
   buttons.tickBtn.addEventListener("click", () => { writeLog(kernel.tick()); render(); });
   buttons.autoTickBtn.addEventListener("click", () => setAutoTick(!autoTickTimer));
   buttons.ioBtn.addEventListener("click", () => { writeLog(kernel.triggerIOInterrupt()); render(); });
+  buttons.benchBtn.addEventListener("click", () => { writeLog(kernel.benchmark(20)); render(); });
   buttons.resetBtn.addEventListener("click", () => { setAutoTick(false); writeLog(kernel.reset()); render(); });
   buttons.clearLogBtn.addEventListener("click", () => { logEl.textContent = ""; writeLog("SYS: log limpiado."); });
   buttons.spawnAutoBtn.addEventListener("click", () => { writeLog(kernel.createProcess()); render(); });
-  buttons.saveBtn.addEventListener("click", () => { localStorage.setItem("amiga_kernel_snapshot", kernel.saveSnapshot()); writeLog("SYS: estado guardado en localStorage."); });
+
+  buttons.saveBtn.addEventListener("click", () => {
+    localStorage.setItem("amiga_kernel_snapshot", kernel.saveSnapshot());
+    writeLog("SYS: estado guardado en localStorage.");
+  });
   buttons.loadBtn.addEventListener("click", () => { writeLog(kernel.loadSnapshot(localStorage.getItem("amiga_kernel_snapshot") || "")); render(); });
   buttons.diagBtn.addEventListener("click", exportDiagnostics);
 
@@ -548,6 +611,19 @@ function bootstrapUI() {
     render();
   });
 
+  document.addEventListener("keydown", (e) => {
+    if (e.key.toLowerCase() === "b" && e.altKey) {
+      e.preventDefault();
+      writeLog(kernel.benchmark(10));
+      render();
+    }
+    if (e.key.toLowerCase() === "t" && e.altKey) {
+      e.preventDefault();
+      writeLog(kernel.tick());
+      render();
+    }
+  });
+
   document.querySelectorAll(".dock-icon").forEach((btn) => {
     btn.addEventListener("click", () => {
       const target = document.getElementById(btn.dataset.focus);
@@ -562,7 +638,7 @@ function bootstrapUI() {
   el("clock").textContent = new Date().toLocaleTimeString();
   applyTheme("ocean");
   render();
-  writeLog("SYS: AmigaOS Kernel Studio listo. Escribe 'help' en shell.");
+  writeLog("SYS: AmigaOS Kernel Studio listo. Tip: Alt+T tick, Alt+B benchmark.");
 }
 
 if (typeof module !== "undefined" && module.exports) {

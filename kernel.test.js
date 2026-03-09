@@ -113,3 +113,23 @@ test("diagnostics incluye red y usuarios", () => {
   assert.equal(typeof report.network.packetsSent, "number");
   assert.equal(report.users.includes("ops"), true);
 });
+
+
+test("benchmark genera historial", () => {
+  const kernel = new OnlineKernel();
+  kernel.boot();
+  kernel.createProcess({ name: "bench.task", cpu: 50, mem: 32, priority: 5 });
+  const out = kernel.benchmark(15);
+  assert.match(out, /BENCH/);
+  assert.equal(kernel.benchmarkHistory.length > 0, true);
+});
+
+test("alerts-clear limpia notificaciones", () => {
+  const kernel = new OnlineKernel();
+  kernel.boot();
+  kernel.login("qa");
+  assert.equal(kernel.notifications.length > 0, true);
+  const msg = kernel.executeCommand("alerts-clear");
+  assert.match(msg, /notificaciones limpiadas/);
+  assert.equal(kernel.notifications.length, 0);
+});

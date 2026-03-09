@@ -36,6 +36,7 @@
           <button class="dock-icon" data-focus="kernelWindow">⚙️<span>Kernel</span></button>
           <button class="dock-icon" data-focus="creatorWindow">🧩<span>Tasks</span></button>
           <button class="dock-icon" data-focus="monitorWindow">📊<span>Monitor</span></button>
+          <button class="dock-icon" data-focus="insightsWindow">🧠<span>Insights</span></button>
           <button class="dock-icon" data-focus="sessionWindow">👤<span>Session</span></button>
           <button class="dock-icon" data-focus="appsWindow">📦<span>Apps</span></button>
           <button class="dock-icon" data-focus="fsWindow">💾<span>Files</span></button>
@@ -46,12 +47,13 @@
           <article class="window" id="kernelWindow">
             <div class="titlebar"><span>Kernel Control</span><div class="window-controls"><i></i><i></i><i></i></div></div>
             <div class="window-content">
-              <p class="subtitle">Kernel con perfiles, snapshot, red simulada y diagnósticos.</p>
+              <p class="subtitle">Kernel con perfiles, snapshot, red simulada, diagnósticos y alertas.</p>
               <div class="control-grid">
                 <button id="bootBtn">Boot</button>
                 <button id="tickBtn" disabled>Tick</button>
                 <button id="autoTickBtn" disabled>Auto Tick</button>
                 <button id="ioBtn" disabled>I/O IRQ</button>
+                <button id="benchBtn" disabled>Benchmark</button>
                 <button id="saveBtn" disabled>Save State</button>
                 <button id="loadBtn">Load State</button>
                 <button id="diagBtn" disabled>Export Diag</button>
@@ -64,6 +66,7 @@
                 <div><label>CPU (último tick)</label><progress id="cpuBar" max="100" value="0"></progress></div>
                 <div><label>Net load</label><progress id="netBar" max="100" value="0"></progress></div>
               </div>
+              <ul id="notificationList" class="notification-list"></ul>
             </div>
           </article>
 
@@ -92,6 +95,14 @@
                 <thead><tr><th>PID</th><th>Task</th><th>Estado</th><th>CPU</th><th>Mem</th><th>Prio</th><th>I/O</th><th>Acción</th></tr></thead>
                 <tbody id="processTable"></tbody>
               </table>
+            </div>
+          </article>
+
+          <article class="window" id="insightsWindow">
+            <div class="titlebar"><span>Insights</span><div class="window-controls"><i></i><i></i><i></i></div></div>
+            <div class="window-content">
+              <p id="insightsSummary" class="mini-status">Sin datos.</p>
+              <ul id="topList" class="file-list"></ul>
             </div>
           </article>
 
@@ -135,7 +146,6 @@
             </div>
           </article>
 
-
           <article class="window" id="visualWindow">
             <div class="titlebar"><span>Workbench Visual</span><div class="window-controls"><i></i><i></i><i></i></div></div>
             <div class="window-content">
@@ -153,7 +163,7 @@
             <div class="window-content">
               <pre id="log"></pre>
               <form id="commandForm" class="command-row">
-                <input id="commandInput" type="text" placeholder="help | ps | whoami | apps | install paint.app" />
+                <input id="commandInput" type="text" placeholder="help | top | bench 10 | netstat | whoami | apps" />
                 <button id="runCmdBtn" type="submit">Run</button>
               </form>
             </div>
