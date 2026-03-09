@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AmigaOS Kernel Studio</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="os-shell">
+      <header class="menubar">
+        <div class="left-menu">
+          <button id="menuBtn" class="menu-btn">☰ System</button>
+          <span class="menu-item">Workbench</span>
+          <span class="menu-item">Tools</span>
+          <span class="menu-item">Prefs</span>
+        </div>
+        <div class="right-menu">
+          <span class="chip-indicator">CHIP + FAST</span>
+          <select id="profileSelect" class="profile-select">
+            <option value="balanced">Perfil: Balanced</option>
+            <option value="performance">Perfil: Performance</option>
+            <option value="eco">Perfil: Eco</option>
+          </select>
+          <select id="themeSelect" class="profile-select">
+            <option value="ocean">Theme: Ocean</option>
+            <option value="purple">Theme: Purple</option>
+            <option value="graphite">Theme: Graphite</option>
+          </select>
+          <span id="clock" class="clock">00:00:00</span>
+        </div>
+      </header>
+
+      <main class="desktop">
+        <aside class="dock">
+          <button class="dock-icon" data-focus="kernelWindow">⚙️<span>Kernel</span></button>
+          <button class="dock-icon" data-focus="creatorWindow">🧩<span>Tasks</span></button>
+          <button class="dock-icon" data-focus="monitorWindow">📊<span>Monitor</span></button>
+          <button class="dock-icon" data-focus="insightsWindow">🧠<span>Insights</span></button>
+          <button class="dock-icon" data-focus="sessionWindow">👤<span>Session</span></button>
+          <button class="dock-icon" data-focus="appsWindow">📦<span>Apps</span></button>
+          <button class="dock-icon" data-focus="fsWindow">💾<span>Files</span></button>
+          <button class="dock-icon" data-focus="shellWindow">⌨️<span>Shell</span></button>
+        </aside>
+
+        <section class="workspace">
+          <article class="window" id="kernelWindow">
+            <div class="titlebar"><span>Kernel Control</span><div class="window-controls"><i></i><i></i><i></i></div></div>
+            <div class="window-content">
+              <p class="subtitle">Kernel con perfiles, snapshot, red simulada, diagnósticos y alertas.</p>
+              <div class="control-grid">
+                <button id="bootBtn">Boot</button>
+                <button id="tickBtn" disabled>Tick</button>
+                <button id="autoTickBtn" disabled>Auto Tick</button>
+                <button id="ioBtn" disabled>I/O IRQ</button>
+                <button id="benchBtn" disabled>Benchmark</button>
+                <button id="saveBtn" disabled>Save State</button>
+                <button id="loadBtn">Load State</button>
+                <button id="diagBtn" disabled>Export Diag</button>
+                <button id="resetBtn">Reset</button>
+                <button id="clearLogBtn">Clear Log</button>
+              </div>
+              <ul id="kernelState" class="state-list"></ul>
+              <div class="metrics">
+                <div><label>Memoria</label><progress id="memBar" max="100" value="0"></progress></div>
+                <div><label>CPU (último tick)</label><progress id="cpuBar" max="100" value="0"></progress></div>
+                <div><label>Net load</label><progress id="netBar" max="100" value="0"></progress></div>
+              </div>
+              <ul id="notificationList" class="notification-list"></ul>
+            </div>
+          </article>
+
+          <article class="window" id="creatorWindow">
+            <div class="titlebar"><span>Task Creator</span><div class="window-controls"><i></i><i></i><i></i></div></div>
+            <div class="window-content">
+              <form id="processForm" class="form-grid">
+                <label>Nombre<input id="nameInput" type="text" placeholder="shell.task" maxlength="20" /></label>
+                <label>CPU<input id="cpuInput" type="number" min="1" max="60" value="8" /></label>
+                <label>Memoria (MB)<input id="memInput" type="number" min="4" max="512" value="64" /></label>
+                <label>Prioridad<input id="prioInput" type="number" min="1" max="10" value="5" /></label>
+                <div class="control-grid">
+                  <button id="spawnManualBtn" type="submit" disabled>Launch</button>
+                  <button id="spawnAutoBtn" type="button" disabled>Auto Task</button>
+                </div>
+              </form>
+            </div>
+          </article>
+
+          <article class="window" id="monitorWindow">
+            <div class="titlebar"><span>Task & Network Monitor</span><div class="window-controls"><i></i><i></i><i></i></div></div>
+            <div class="window-content">
+              <div id="queueView" class="queue-view"></div>
+              <p id="networkStats" class="mini-status"></p>
+              <table>
+                <thead><tr><th>PID</th><th>Task</th><th>Estado</th><th>CPU</th><th>Mem</th><th>Prio</th><th>I/O</th><th>Acción</th></tr></thead>
+                <tbody id="processTable"></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="window" id="insightsWindow">
+            <div class="titlebar"><span>Insights</span><div class="window-controls"><i></i><i></i><i></i></div></div>
+            <div class="window-content">
+              <p id="insightsSummary" class="mini-status">Sin datos.</p>
+              <ul id="topList" class="file-list"></ul>
+            </div>
+          </article>
+
+          <article class="window" id="sessionWindow">
+            <div class="titlebar"><span>Users & Session</span><div class="window-controls"><i></i><i></i><i></i></div></div>
+            <div class="window-content">
+              <form id="loginForm" class="command-row">
+                <input id="loginInput" type="text" placeholder="nombre de usuario" />
+                <button id="loginBtn" type="submit">Login</button>
+              </form>
+              <div class="control-grid">
+                <button id="logoutBtn" disabled>Logout</button>
+              </div>
+              <p id="sessionInfo" class="mini-status"></p>
+            </div>
+          </article>
+
+          <article class="window" id="appsWindow">
+            <div class="titlebar"><span>App Manager</span><div class="window-controls"><i></i><i></i><i></i></div></div>
+            <div class="window-content">
+              <form id="appForm" class="command-row">
+                <input id="appInput" type="text" placeholder="paint.app" />
+                <button id="installAppBtn" type="submit" disabled>Install</button>
+              </form>
+              <ul id="appsList" class="file-list"></ul>
+            </div>
+          </article>
+
+          <article class="window" id="fsWindow">
+            <div class="titlebar"><span>Virtual FileSystem</span><div class="window-controls"><i></i><i></i><i></i></div></div>
+            <div class="window-content">
+              <form id="fileForm" class="form-grid">
+                <label>Archivo<input id="fileNameInput" type="text" placeholder="notes.txt" maxlength="40" /></label>
+                <label>Contenido<input id="fileContentInput" type="text" placeholder="hola amiga" maxlength="120" /></label>
+                <div class="control-grid">
+                  <button id="createFileBtn" type="submit" disabled>Write File</button>
+                  <button id="refreshFsBtn" type="button">Refresh</button>
+                </div>
+              </form>
+              <ul id="fileList" class="file-list"></ul>
+            </div>
+          </article>
+
+          <article class="window" id="visualWindow">
+            <div class="titlebar"><span>Workbench Visual</span><div class="window-controls"><i></i><i></i><i></i></div></div>
+            <div class="window-content">
+              <div class="control-grid">
+                <button id="toggleScanBtn">CRT Scanlines</button>
+                <button id="toggleGlowBtn">Neon Glow</button>
+                <button id="cascadeBtn">Cascade Windows</button>
+              </div>
+              <p class="mini-status">Ajusta el look retro AmigaOS del escritorio.</p>
+            </div>
+          </article>
+
+          <article class="window" id="shellWindow">
+            <div class="titlebar"><span>Amiga Shell</span><div class="window-controls"><i></i><i></i><i></i></div></div>
+            <div class="window-content">
+              <pre id="log"></pre>
+              <form id="commandForm" class="command-row">
+                <input id="commandInput" type="text" placeholder="help | top | bench 10 | netstat | whoami | apps" />
+                <button id="runCmdBtn" type="submit">Run</button>
+              </form>
+            </div>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script src="kernel.js"></script>
+  </body>
+</html>
