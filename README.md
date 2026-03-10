@@ -24,17 +24,15 @@ Simulador web del kernel con interfaz gráfica estilo AmigaOS, ahora con más m�
 
 ## Comandos de Shell
 
-- `help`, `ps`, `top`, `bench <n>`, `tick`, `io`, `netstat`, `uptime`, `kill <pid>`
-- `status`, `scheduler <hybrid|rr|priority>`, `maintenance`
-- `services`, `startsvc <name>`, `stopsvc <name>`
-- `templates`, `template-add <n> <cpu> <mem> <prio>`, `template-run <n>`, `firewall <on|off>`, `audit`
-- `quota <usuario> <mem>`, `jobs`, `powersave`, `history`
-- `profile <eco|balanced|performance>`
-- `whoami`, `login <usuario>`, `logout`
-- `apps`, `install <app>`
-- `ls`, `cat <file>`, `write <file> <texto>`, `rm <file>`
-- `alerts-clear`
-- `save`, `load`
+- Núcleo/CPU: `help`, `status`, `tick`, `bench <n>`, `ps`, `top`, `kill <pid>`, `scheduler <hybrid|rr|priority>`, `cores <n>`, `profile <eco|balanced|performance>`
+- Interrupciones/dispositivos: `io`, `irq <type> <source> <prio>`, `irq-list`, `dev <name> <on|off>`, `dev-list`
+- Estabilidad: `panic <reason>`, `recover`, `maintenance`, `aging <on|off>`, `compact`
+- Red/seguridad: `netstat`, `firewall <on|off>`, `audit`
+- Servicios: `services`, `startsvc <name>`, `stopsvc <name>`
+- Automatización: `templates`, `template-add <n> <cpu> <mem> <prio>`, `template-run <n>`, `jobs`, `history`
+- Usuarios/energía: `whoami`, `login <usuario>`, `logout`, `quota <usuario> <mem>`, `powersave`
+- Apps/FS: `apps`, `install <app>`, `ls`, `cat <file>`, `write <file> <texto>`, `rm <file>`
+- Utilidades: `uptime`, `alerts-clear`, `save`, `load`
 
 ## Requisitos para PC real 64 bits
 
