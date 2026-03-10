@@ -33,6 +33,10 @@ class OnlineKernel {
     this.agingEnabled = true;
     this.fragmentationLevel = 0;
     this.serviceEvents = { failures: 0, restarts: 0 };
+    this.swapTotal = config.swapTotal ?? 2048;
+    this.swapUsed = 0;
+    this.serviceWatchdogEnabled = true;
+    this.serviceFailureRate = 0.03;
     this.reset();
   }
 
@@ -77,6 +81,9 @@ class OnlineKernel {
     this.services = this.services.map((svc) => ({ ...svc, running: false }));
     this.fragmentationLevel = 0;
     this.serviceEvents = { failures: 0, restarts: 0 };
+    this.swapUsed = 0;
+    this.serviceWatchdogEnabled = true;
+    this.serviceFailureRate = 0.03;
     return "SYS: Reinicio completo.";
   }
 
@@ -299,9 +306,10 @@ class OnlineKernel {
   }
 
   serviceSupervisorTick() {
+    if (!this.serviceWatchdogEnabled) return;
     this.services.forEach((svc) => {
       if (!svc.running) return;
-      if (Math.random() < 0.03) {
+      if (Math.random() < this.serviceFailureRate) {
         svc.running = false;
         this.serviceEvents.failures += 1;
         this.notify(`Service fault: ${svc.name}`, "warn");
@@ -313,6 +321,35 @@ class OnlineKernel {
         }
       }
     });
+  }
+
+  canAccessFile(file, mode = "read") {
+    if (!file) return false;
+    const user = this.currentUser || "system";
+    if (user === "admin" || file.owner === user) return true;
+    if (mode === "read") return Boolean(file.shared);
+    return false;
+  }
+
+  setFileShare(name, on) {
+    const safe = String(name || "").trim();
+    const file = this.files.find((f) => f.name === safe);
+    if (!file) return `ERR: archivo '${safe}' no existe.`;
+    if (!this.canAccessFile(file, "write")) return "ERR: permiso denegado.";
+    file.shared = Boolean(on);
+    return `FS: '${safe}' share=${file.shared ? "on" : "off"}.`;
+  }
+
+  trySwapInProcess(proc) {
+    if (!proc || (proc.swapMem || 0) <= 0) return true;
+    const freeRam = this.memoryTotal - this.memoryUsed;
+    if (freeRam < proc.swapMem) return false;
+    this.memoryUsed += proc.swapMem;
+    this.swapUsed -= proc.swapMem;
+    proc.ramMem = (proc.ramMem || 0) + proc.swapMem;
+    proc.swapMem = 0;
+    this.notify(`SWAP-IN PID ${proc.pid}`, "ok");
+    return true;
   }
 
   createProcess(spec = {}) {
@@ -327,9 +364,12 @@ class OnlineKernel {
       if (ownerUsage + mem > quota) return `ERR: quota excedida para ${owner} (${quota}MB).`;
     }
     const allocMem = mem + Math.ceil((mem * this.fragmentationLevel) / 100 * 0.2);
-    if (this.memoryUsed + allocMem > this.memoryTotal) {
-      this.notify("Memoria insuficiente", "warn");
-      return `ERR: memoria CHIP/FAST insuficiente (${mem}MB).`;
+    const ramAvail = this.memoryTotal - this.memoryUsed;
+    const ramAlloc = Math.max(0, Math.min(allocMem, ramAvail));
+    const swapNeed = allocMem - ramAlloc;
+    if (swapNeed > 0 && (this.swapUsed + swapNeed > this.swapTotal)) {
+      this.notify("Memoria/swap insuficiente", "warn");
+      return `ERR: memoria CHIP/FAST y SWAP insuficiente (${mem}MB).`;
     }
 
     const cpu = this.clamp(spec.cpu ?? this.random(2, 12), 1, 60);
@@ -348,11 +388,14 @@ class OnlineKernel {
       cpuUsed: 0,
       waitTicks: 0,
       allocMem,
+      ramMem: ramAlloc,
+      swapMem: swapNeed,
     };
 
     this.processes.push(process);
-    this.memoryUsed += allocMem;
-    return `TASK: ${process.name} PID=${process.pid} CPU=${cpu} MEM=${mem}MB(alloc=${allocMem}) PRIO=${priority} OWNER=${process.owner}.`;
+    this.memoryUsed += ramAlloc;
+    this.swapUsed += swapNeed;
+    return `TASK: ${process.name} PID=${process.pid} CPU=${cpu} MEM=${mem}MB(alloc=${allocMem},swap=${swapNeed}) PRIO=${priority} OWNER=${process.owner}.`;
   }
 
   killProcess(pid) {
@@ -362,7 +405,8 @@ class OnlineKernel {
 
     proc.state = "TERMINATED";
     proc.blockedFor = 0;
-    this.memoryUsed -= (proc.allocMem || proc.mem);
+    this.memoryUsed -= (proc.ramMem || proc.allocMem || proc.mem);
+    this.swapUsed -= (proc.swapMem || 0);
     this.fragmentationLevel = this.clamp(this.fragmentationLevel + this.random(1, 4), 0, 60);
     this.completedCount += 1;
     this.notify(`Proceso ${pid} terminado`, "warn");
@@ -409,6 +453,7 @@ class OnlineKernel {
       const index = (this.roundRobinIndex + core) % readyQueue.length;
       const proc = readyQueue[index];
       if (proc.state !== "READY") continue;
+      if (!this.trySwapInProcess(proc)) { logs.push(`C${core}: PID ${proc.pid} esperando SWAP`); continue; }
       proc.state = "RUNNING";
       proc.waitTicks = 0;
       const runCycles = Math.min(this.quantum, proc.cpuLeft);
@@ -417,7 +462,8 @@ class OnlineKernel {
       this.coreLoad[core] = Math.round((runCycles / this.quantum) * 100);
       if (proc.cpuLeft <= 0) {
         proc.state = "TERMINATED";
-        this.memoryUsed -= (proc.allocMem || proc.mem);
+        this.memoryUsed -= (proc.ramMem || proc.allocMem || proc.mem);
+    this.swapUsed -= (proc.swapMem || 0);
         this.fragmentationLevel = this.clamp(this.fragmentationLevel + this.random(1, 3), 0, 60);
         this.completedCount += 1;
         logs.push(`C${core}: PID ${proc.pid} terminó`);
@@ -539,23 +585,28 @@ class OnlineKernel {
     if (!safe) return "ERR: nombre de archivo vacío.";
     const file = this.files.find((f) => f.name === safe);
     if (file) {
+      if (!this.canAccessFile(file, "write")) return "ERR: permiso denegado.";
       file.content = String(content);
       file.updatedAt = this.clock;
       return `FS: '${safe}' actualizado.`;
     }
-    this.files.push({ name: safe, content: String(content), updatedAt: this.clock });
+    this.files.push({ name: safe, content: String(content), updatedAt: this.clock, owner: this.currentUser || "system", shared: false });
     return `FS: '${safe}' creado.`;
   }
 
   readFile(name) {
     const file = this.files.find((f) => f.name === name);
-    return file ? `FILE ${file.name}: ${file.content}` : `ERR: archivo '${name}' no existe.`;
+    if (!file) return `ERR: archivo '${name}' no existe.`;
+    if (!this.canAccessFile(file, "read")) return "ERR: permiso denegado.";
+    return `FILE ${file.name}: ${file.content}`;
   }
 
   deleteFile(name) {
-    const before = this.files.length;
+    const file = this.files.find((f) => f.name === name);
+    if (!file) return `ERR: archivo '${name}' no existe.`;
+    if (!this.canAccessFile(file, "write")) return "ERR: permiso denegado.";
     this.files = this.files.filter((f) => f.name !== name);
-    return before === this.files.length ? `ERR: archivo '${name}' no existe.` : `FS: '${name}' eliminado.`;
+    return `FS: '${name}' eliminado.`;
   }
 
   listFiles() {
@@ -590,6 +641,8 @@ class OnlineKernel {
       memoryFragmentation: state.fragmentationLevel,
       agingEnabled: state.agingEnabled,
       serviceEvents: state.serviceEvents,
+      swap: { used: state.swapUsed, total: state.swapTotal },
+      watchdog: { enabled: state.serviceWatchdogEnabled, rate: state.serviceFailureRate },
     };
   }
 
@@ -609,6 +662,10 @@ class OnlineKernel {
       fragmentationLevel: this.fragmentationLevel,
       agingEnabled: this.agingEnabled,
       serviceEvents: this.serviceEvents,
+      swapTotal: this.swapTotal,
+      swapUsed: this.swapUsed,
+      serviceWatchdogEnabled: this.serviceWatchdogEnabled,
+      serviceFailureRate: this.serviceFailureRate,
       schedulerMode: this.schedulerMode,
       maintenanceMode: this.maintenanceMode,
       pid: this.pid,
@@ -628,9 +685,6 @@ class OnlineKernel {
       jobs: this.jobs,
       powerSaveMode: this.powerSaveMode,
       commandHistory: this.commandHistory,
-      agingEnabled: this.agingEnabled,
-      fragmentationLevel: this.fragmentationLevel,
-      serviceEvents: this.serviceEvents,
     });
   }
 
@@ -670,7 +724,11 @@ class OnlineKernel {
       this.agingEnabled = data.agingEnabled !== undefined ? Boolean(data.agingEnabled) : true;
       this.fragmentationLevel = Number(data.fragmentationLevel || 0);
       this.serviceEvents = data.serviceEvents && typeof data.serviceEvents === "object" ? data.serviceEvents : { failures: 0, restarts: 0 };
-      this.memoryUsed = this.processes.filter((p) => p.state !== "TERMINATED").reduce((sum, p) => sum + (p.allocMem || p.mem), 0);
+      this.swapTotal = Number(data.swapTotal || this.swapTotal || 2048);
+      this.swapUsed = Number(data.swapUsed || 0);
+      this.serviceWatchdogEnabled = data.serviceWatchdogEnabled !== undefined ? Boolean(data.serviceWatchdogEnabled) : true;
+      this.serviceFailureRate = Number(data.serviceFailureRate ?? 0.03);
+      this.memoryUsed = this.processes.filter((p) => p.state !== "TERMINATED").reduce((sum, p) => sum + (p.ramMem || p.allocMem || p.mem), 0);
       return "SYS: snapshot cargado correctamente.";
     } catch {
       return "ERR: snapshot inválido.";
@@ -686,9 +744,9 @@ class OnlineKernel {
       this.commandHistory = this.commandHistory.slice(0, 100);
     }
 
-    if (cmd === "help") return "help, status, ps, top, bench <n>, tick, io, irq <type> <source> <prio>, irq-list, netstat, uptime, kill <pid>, profile <eco|balanced|performance>, scheduler <hybrid|rr|priority>, cores <n>, aging <on|off>, compact, maintenance, panic <reason>, recover, whoami, login <user>, logout, apps, install <app>, ls, cat <file>, write <file> <txt>, rm <file>, alerts-clear, services, startsvc <name>, stopsvc <name>, dev <name> <on|off>, dev-list, firewall <on|off>, templates, template-add <n> <cpu> <mem> <prio>, template-run <n>, quota <user> <mem>, powersave, jobs, history, audit, save, load";
+    if (cmd === "help") return "help, status, ps, top, bench <n>, tick, io, irq <type> <source> <prio>, irq-list, netstat, uptime, kill <pid>, profile <eco|balanced|performance>, scheduler <hybrid|rr|priority>, cores <n>, aging <on|off>, compact, maintenance, panic <reason>, recover, whoami, login <user>, logout, apps, install <app>, ls, cat <file>, write <file> <txt>, rm <file>, alerts-clear, services, startsvc <name>, stopsvc <name>, dev <name> <on|off>, dev-list, firewall <on|off>, templates, template-add <n> <cpu> <mem> <prio>, template-run <n>, quota <user> <mem>, powersave, jobs, job-add <delay> <cmd>, history, audit, share <file> <on|off>, watchdog <on|off>, svcfail <rate>, save, load";
     if (cmd === "status") {
-      return `profile=${this.profile} scheduler=${this.schedulerMode} cores=${this.coreCount} panic=${this.panicState ? "on" : "off"} maintenance=${this.maintenanceMode ? "on" : "off"} irqDepth=${this.interruptQueue.length} frag=${this.fragmentationLevel}% aging=${this.agingEnabled ? "on" : "off"}`;
+      return `profile=${this.profile} scheduler=${this.schedulerMode} cores=${this.coreCount} panic=${this.panicState ? "on" : "off"} maintenance=${this.maintenanceMode ? "on" : "off"} irqDepth=${this.interruptQueue.length} frag=${this.fragmentationLevel}% aging=${this.agingEnabled ? "on" : "off"} swap=${this.swapUsed}/${this.swapTotal}`;
     }
     if (cmd === "ps") return this.processes.map((p) => `PID ${p.pid} ${p.name} ${p.state} CPU=${p.cpuLeft}`).join(" | ") || "sin procesos";
     if (cmd === "top") return this.getTopProcesses().map((p) => `${p.name}(PID${p.pid}) cpuUsed=${p.cpuUsed}`).join(" | ") || "sin procesos";
@@ -725,6 +783,10 @@ class OnlineKernel {
     if (cmd === "quota") return this.setUserQuota(args[0], args[1]);
     if (cmd === "powersave") return this.togglePowerSave();
     if (cmd === "jobs") return this.jobs.map((j) => `${j.at}:${j.command}`).join(" | ") || "sin jobs";
+    if (cmd === "job-add") return this.addJob(Number(args[0] || 1), args.slice(1).join(" "));
+    if (cmd === "share") return this.setFileShare(args[0], args[1] === "on");
+    if (cmd === "watchdog") { this.serviceWatchdogEnabled = args[0] !== "off"; return `SVC: watchdog ${this.serviceWatchdogEnabled ? "ON" : "OFF"}.`; }
+    if (cmd === "svcfail") { this.serviceFailureRate = this.clamp(args[0], 0, 0.5); return `SVC: failureRate=${this.serviceFailureRate}`; }
     if (cmd === "history") return this.commandHistory.slice(0, 8).map((h) => `${h.at}:${h.cmd}`).join(" | ") || "sin historial";
     if (cmd === "audit") return this.auditTrail.slice(0, 8).map((a) => `${a.at}:${a.message}`).join(" | ") || "sin eventos";
     if (cmd === "ls") return this.listFiles();
@@ -758,6 +820,10 @@ class OnlineKernel {
       fragmentationLevel: this.fragmentationLevel,
       agingEnabled: this.agingEnabled,
       serviceEvents: this.serviceEvents,
+      swapTotal: this.swapTotal,
+      swapUsed: this.swapUsed,
+      serviceWatchdogEnabled: this.serviceWatchdogEnabled,
+      serviceFailureRate: this.serviceFailureRate,
       schedulerMode: this.schedulerMode,
       maintenanceMode: this.maintenanceMode,
       ready: countByState("READY"),
@@ -919,7 +985,7 @@ function bootstrapUI() {
       <li><strong>Scheduler:</strong> ${s.schedulerMode} | <strong>Cores:</strong> ${s.coreCount}</li>
       <li><strong>Kernel Panic:</strong> ${s.panicState ? `<span class="warn">ON (${s.panicState.reason})</span>` : '<span class="ok">OFF</span>'} | <strong>Maintenance:</strong> ${s.maintenanceMode ? "ON" : "OFF"}</li>
       <li><strong>Clock Tick:</strong> ${s.clock} | <strong>Quantum:</strong> ${s.quantum}</li>
-      <li><strong>Memoria:</strong> ${s.memoryUsed}/${s.memoryTotal}MB (${memoryPercent}%) | <strong>Frag:</strong> ${s.fragmentationLevel}%</li>
+      <li><strong>Memoria:</strong> ${s.memoryUsed}/${s.memoryTotal}MB (${memoryPercent}%) | <strong>Swap:</strong> ${s.swapUsed}/${s.swapTotal}MB | <strong>Frag:</strong> ${s.fragmentationLevel}%</li>
       <li><strong>READY/BLOCKED/RUNNING:</strong> ${s.ready}/${s.blocked}/${s.running}</li>
       <li><strong>Terminados:</strong> ${s.terminated} | <strong>Idle:</strong> ${s.idleTicks}</li>
       <li><strong>IRQ queue:</strong> ${s.interruptQueue.length} | <strong>IRQ avg latency:</strong> ${s.interruptStats.avgLatency}</li>

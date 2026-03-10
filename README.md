@@ -26,12 +26,12 @@ Simulador web del kernel con interfaz gráfica estilo AmigaOS, ahora con más m�
 
 - Núcleo/CPU: `help`, `status`, `tick`, `bench <n>`, `ps`, `top`, `kill <pid>`, `scheduler <hybrid|rr|priority>`, `cores <n>`, `profile <eco|balanced|performance>`
 - Interrupciones/dispositivos: `io`, `irq <type> <source> <prio>`, `irq-list`, `dev <name> <on|off>`, `dev-list`
-- Estabilidad: `panic <reason>`, `recover`, `maintenance`, `aging <on|off>`, `compact`
+- Estabilidad: `panic <reason>`, `recover`, `maintenance`, `aging <on|off>`, `compact`, `watchdog <on|off>`, `svcfail <rate>`
 - Red/seguridad: `netstat`, `firewall <on|off>`, `audit`
 - Servicios: `services`, `startsvc <name>`, `stopsvc <name>`
-- Automatización: `templates`, `template-add <n> <cpu> <mem> <prio>`, `template-run <n>`, `jobs`, `history`
+- Automatización: `templates`, `template-add <n> <cpu> <mem> <prio>`, `template-run <n>`, `jobs`, `job-add <delay> <cmd>`, `history`
 - Usuarios/energía: `whoami`, `login <usuario>`, `logout`, `quota <usuario> <mem>`, `powersave`
-- Apps/FS: `apps`, `install <app>`, `ls`, `cat <file>`, `write <file> <texto>`, `rm <file>`
+- Apps/FS: `apps`, `install <app>`, `ls`, `cat <file>`, `write <file> <texto>`, `rm <file>`, `share <file> <on|off>`
 - Utilidades: `uptime`, `alerts-clear`, `save`, `load`
 
 ## Requisitos para PC real 64 bits

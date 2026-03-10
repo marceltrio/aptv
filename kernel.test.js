@@ -266,3 +266,35 @@ test("snapshot conserva fragmentation, aging y serviceEvents", () => {
   assert.equal(k2.fragmentationLevel, 17);
   assert.equal(k2.serviceEvents.restarts, 3);
 });
+
+
+test("usa swap cuando memoria RAM no alcanza", () => {
+  const k = new OnlineKernel({ memoryTotal: 64, swapTotal: 128 });
+  k.boot();
+  const out = k.createProcess({ name: "big.swap", cpu: 5, mem: 80, priority: 4 });
+  assert.match(out, /swap=/);
+  assert.equal(k.swapUsed > 0, true);
+});
+
+test("permisos de FS bloquean lectura de archivo privado", () => {
+  const k = new OnlineKernel();
+  k.boot();
+  k.executeCommand("login alice");
+  k.createFile("secret.txt", "top-secret");
+  k.executeCommand("login bob");
+  assert.match(k.readFile("secret.txt"), /permiso denegado/);
+  k.executeCommand("login alice");
+  k.executeCommand("share secret.txt on");
+  k.executeCommand("login bob");
+  assert.match(k.readFile("secret.txt"), /top-secret/);
+});
+
+test("job-add y watchdog por comandos", () => {
+  const k = new OnlineKernel();
+  k.boot();
+  assert.match(k.executeCommand("watchdog off"), /OFF/);
+  assert.equal(k.serviceWatchdogEnabled, false);
+  assert.match(k.executeCommand("job-add 1 template-add delayed 3 16 2"), /JOB:/);
+  k.tick();
+  assert.equal(k.templates.some((t) => t.name === "delayed"), true);
+});
