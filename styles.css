@@ -17,6 +17,7 @@
 
 body.theme-purple { --bg-1: #31124c; --bg-2: #6b2d7e; --title: #4b1f6a; --accent: #d39bff; }
 body.theme-graphite { --bg-1: #1d232b; --bg-2: #3a4654; --title: #2a3644; --accent: #8ad5ff; }
+body.theme-ios { --bg-1: #d9e5f4; --bg-2: #b5c9e3; --panel: rgba(255,255,255,0.72); --inner: rgba(255,255,255,0.85); --title: #4a6f95; --title-text: #fff; --text: #0b1f33; --border-hi: #f7fbff; --border-lo: #8ca7c4; --shell-bg: #0f2438; --shell-text: #b9ffe3; --accent: #2f93ff; }
 
 * { box-sizing: border-box; font-family: "Topaz Plus", "Courier New", monospace; }
 body { margin: 0; min-height: 100vh; background: radial-gradient(circle at top, var(--bg-2), var(--bg-1)); }
@@ -50,6 +51,15 @@ body.scanlines::before { content: ""; position: fixed; inset: 0; pointer-events:
 .window { background: var(--panel); border-top: 2px solid var(--border-hi); border-left: 2px solid var(--border-hi); border-right: 2px solid var(--border-lo); border-bottom: 2px solid var(--border-lo); box-shadow: 0 8px 22px rgba(0, 0, 0, 0.25); transition: box-shadow .2s ease, transform .2s ease; }
 body.neon .window { box-shadow: 0 0 0 1px rgba(255,255,255,0.3), 0 0 14px color-mix(in srgb, var(--accent) 70%, transparent); }
 .window:hover { transform: translateY(-1px); }
+body.theme-ios .window,
+body.theme-ios .dock,
+body.theme-ios button,
+body.theme-ios input,
+body.theme-ios textarea,
+body.theme-ios .profile-select { border-radius: 14px; }
+body.theme-ios .window,
+body.theme-ios button { border-width: 1px; }
+body.theme-ios .titlebar { border-top-left-radius: 14px; border-top-right-radius: 14px; }
 
 .titlebar { background: linear-gradient(180deg, #1f567a, var(--title)); color: var(--title-text); display: flex; justify-content: space-between; align-items: center; padding: 0.4rem 0.6rem; }
 .window-controls { display: flex; gap: 0.25rem; }

@@ -639,3 +639,32 @@ test("snapshot conserva appProfiles y compatibleStore", () => {
   assert.equal(k2.appProfiles["office.neo"], "corp");
   assert.equal(Array.isArray(k2.compatibleStore), true);
 });
+
+test("ios-setup habilita modo ios e instala apps base", () => {
+  const k = new OnlineKernel();
+  k.boot();
+  const out = k.executeCommand("ios-setup");
+  assert.match(out, /iOS-like/);
+  assert.equal(k.interfaceMode, "ios");
+  assert.equal(k.apps.includes("springboard.app"), true);
+});
+
+test("ui-mode permite alternar entre amiga e ios", () => {
+  const k = new OnlineKernel();
+  k.boot();
+  assert.match(k.executeCommand("ui-mode ios"), /iOS-like/);
+  assert.equal(k.interfaceMode, "ios");
+  assert.match(k.executeCommand("ui-mode amiga"), /Amiga/);
+  assert.equal(k.interfaceMode, "amiga");
+});
+
+test("snapshot conserva interfaceMode y iosCompatibleApps", () => {
+  const k1 = new OnlineKernel();
+  k1.boot();
+  k1.executeCommand("ui-mode ios");
+  const snap = k1.saveSnapshot();
+  const k2 = new OnlineKernel();
+  k2.loadSnapshot(snap);
+  assert.equal(k2.interfaceMode, "ios");
+  assert.equal(k2.iosCompatibleApps.includes("safari.app"), true);
+});

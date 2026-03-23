@@ -39,6 +39,7 @@ class OnlineKernel {
     this.packageRepo = ["shell.app", "monitor.app", "store.app", "editor.app", "nettools.app"];
     this.appStore = ["paint.app", "music.app", "files.app", "sysguard.app"];
     this.compatibleStore = ["studio.app", "nettools.app", "files.app", "sec.audit.app"];
+    this.iosCompatibleApps = ["springboard.app", "safari.app", "messages.app", "notes.app", "photos.app"];
     this.updateCatalog = ["kernel.core", "scheduler.pack", "security.patch", "arkrfs.tools"];
     this.availableUpdates = [];
     this.virtualDesktops = [{ id: 1, name: "Main", apps: [] }];
@@ -47,6 +48,7 @@ class OnlineKernel {
     this.aiModel = "NovaCore-Lite";
     this.restorePoints = [];
     this.kernelVersion = "1.0.0-x64";
+    this.interfaceMode = "amiga";
     this.appSandboxes = {};
     this.notifications = [];
     this.benchmarkHistory = [];
@@ -178,6 +180,7 @@ class OnlineKernel {
     this.plugins = [];
     this.restorePoints = [];
     this.kernelVersion = "1.0.0-x64";
+    this.interfaceMode = "amiga";
     this.virtualMemory = { pages: [], pageSizeMB: 4, nextPageId: 1, faults: 0, protectedPages: 0 };
     this.fsJournal = [];
     this.appSandboxes = {};
@@ -1018,7 +1021,28 @@ class OnlineKernel {
       { name: "files.app", minKernel: 1, arch: "x64", drivers: ["nvme"], services: ["fs.service"] },
       { name: "nettools.app", minKernel: 1, arch: "x64", drivers: ["e1000"], services: ["net.service"] },
       { name: "studio.app", minKernel: 1, arch: "x64", drivers: ["virtio-gpu"], services: [] },
+      { name: "springboard.app", minKernel: 1, arch: "x64", drivers: ["virtio-gpu"], services: [] },
+      { name: "safari.app", minKernel: 1, arch: "x64", drivers: ["e1000", "virtio-gpu"], services: ["net.service"] },
+      { name: "messages.app", minKernel: 1, arch: "x64", drivers: ["e1000"], services: ["net.service"] },
+      { name: "notes.app", minKernel: 1, arch: "x64", drivers: [], services: ["fs.service"] },
     ].forEach((pkg) => this.registerCompatibleApp(pkg));
+  }
+
+  setupIOSLikeEnvironment() {
+    this.interfaceMode = "ios";
+    this.iosCompatibleApps.forEach((app) => {
+      if (this.appRegistry.some((a) => a.name === app)) this.installCompatibleBundle(app, "touch");
+    });
+    this.notify("iOS-like mode activado", "ok");
+    return "UI: modo iOS-like activado.";
+  }
+
+  setInterfaceMode(mode = "amiga") {
+    const safe = String(mode || "amiga").trim().toLowerCase();
+    if (!["amiga", "ios"].includes(safe)) return "ERR: modo UI inválido.";
+    if (safe === "ios") return this.setupIOSLikeEnvironment();
+    this.interfaceMode = "amiga";
+    return "UI: modo Amiga activado.";
   }
 
   registerCompatibleApp(spec = {}) {
@@ -1383,6 +1407,7 @@ class OnlineKernel {
       appRegistry: state.appRegistry,
       appProfiles: state.appProfiles,
       compatibleStore: state.compatibleStore,
+      interfaceMode: state.interfaceMode,
     };
   }
 
@@ -1420,6 +1445,7 @@ class OnlineKernel {
       appRegistry: this.appRegistry,
       appProfiles: this.appProfiles,
       compatibleStore: this.compatibleStore,
+      iosCompatibleApps: this.iosCompatibleApps,
       services: this.services,
       network: this.network,
       benchmarkHistory: this.benchmarkHistory,
@@ -1448,6 +1474,7 @@ class OnlineKernel {
       aiModel: this.aiModel,
       restorePoints: this.restorePoints,
       kernelVersion: this.kernelVersion,
+      interfaceMode: this.interfaceMode,
       netCircuitOpen: this.netCircuitOpen,
       netCircuitUntil: this.netCircuitUntil,
       schedulerLatency: this.schedulerLatency,
@@ -1482,6 +1509,7 @@ class OnlineKernel {
       this.appRegistry = Array.isArray(data.appRegistry) ? data.appRegistry : [];
       this.appProfiles = data.appProfiles && typeof data.appProfiles === "object" ? data.appProfiles : {};
       this.compatibleStore = Array.isArray(data.compatibleStore) ? data.compatibleStore : ["studio.app", "nettools.app", "files.app", "sec.audit.app"];
+      this.iosCompatibleApps = Array.isArray(data.iosCompatibleApps) ? data.iosCompatibleApps : ["springboard.app", "safari.app", "messages.app", "notes.app", "photos.app"];
       this.services = Array.isArray(data.services) ? data.services : [];
       this.network = data.network || { packetsSent: 0, packetsDropped: 0, load: 0 };
       this.benchmarkHistory = Array.isArray(data.benchmarkHistory) ? data.benchmarkHistory : [];
@@ -1514,6 +1542,7 @@ class OnlineKernel {
       this.aiModel = data.aiModel || "NovaCore-Lite";
       this.restorePoints = Array.isArray(data.restorePoints) ? data.restorePoints : [];
       this.kernelVersion = data.kernelVersion || "1.0.0-x64";
+      this.interfaceMode = data.interfaceMode || "amiga";
       this.agingEnabled = data.agingEnabled !== undefined ? Boolean(data.agingEnabled) : true;
       this.fragmentationLevel = Number(data.fragmentationLevel || 0);
       this.serviceEvents = data.serviceEvents && typeof data.serviceEvents === "object" ? data.serviceEvents : { failures: 0, restarts: 0 };
@@ -1538,7 +1567,7 @@ class OnlineKernel {
       this.commandHistory = this.commandHistory.slice(0, 100);
     }
 
-    if (cmd === "help") return "help, status, ps, top, bench <n>, tick, io, irq <type> <source> <prio>, irq-list, netstat, uptime, kill <pid>, profile <eco|balanced|performance>, scheduler <hybrid|rr|priority>, cores <n>, aging <on|off>, compact, maintenance, panic <reason>, recover, whoami, login <user>, logout, apps, install <app>, uninstall <app>, app-run <app>, app-compat <app>, app-info <app>, app-installc <app> [profile], app-reg <name> <minKernel> <arch> <driversCSV> <servicesCSV>, store, store-compatible, install-store <app>, ls, cat <file> [key], write <file> <txt>, writec <file> <txt>, writee <file> <key> <txt>, rm <file>, mkdir <path>, chmod <file> <owner> <others>, fs-journal, fs-root, fs-tree, fsck [repair], updates, update <name|all>, desktop-add <name>, desktop-switch <id|name>, desktops, plugin-add <name> [ver], plugin <name> <on|off>, plugins, voice <texto>, ai <consulta>, rp-create <name>, rp-list, rp-load <id|name>, alerts-clear, services, startsvc <name>, stopsvc <name>, dev <name> <on|off>, dev-list, drv-list, drv-load <name>, drv-unload <name>, firewall <on|off>, templates, template-add <n> <cpu> <mem> <prio>, template-run <n>, quota <user> <mem>, powersave, jobs, job-add <delay> <cmd>, job-addp <delay> <prio> <cmd>, history, audit, share <file> <on|off>, watchdog <on|off>, svcfail <rate>, suspend <pid>, resume <pid>, netpolicy <low|normal|high>, governor <manual|auto>, role <user> <admin|operator|user>, policies, policy-add <metric> <op> <value> <action>, policy-clear, events, events-clear, namespaces, vmalloc <mb> <flags>, vmprotect <id> <flags>, vmaccess <id> <mode>, vmstat, syscall <name> [...args], secureboot <on|off>, diskenc <on|off>, malware-scan, sandbox <app> <on|off>, net-circuit, prog-list, prog-run <name>, prog-rm <name>, save, load";
+    if (cmd === "help") return "help, status, ps, top, bench <n>, tick, io, irq <type> <source> <prio>, irq-list, netstat, uptime, kill <pid>, profile <eco|balanced|performance>, scheduler <hybrid|rr|priority>, cores <n>, aging <on|off>, compact, maintenance, panic <reason>, recover, whoami, login <user>, logout, apps, install <app>, uninstall <app>, app-run <app>, app-compat <app>, app-info <app>, app-installc <app> [profile], app-reg <name> <minKernel> <arch> <driversCSV> <servicesCSV>, store, store-compatible, ui-mode <amiga|ios>, ios-setup, install-store <app>, ls, cat <file> [key], write <file> <txt>, writec <file> <txt>, writee <file> <key> <txt>, rm <file>, mkdir <path>, chmod <file> <owner> <others>, fs-journal, fs-root, fs-tree, fsck [repair], updates, update <name|all>, desktop-add <name>, desktop-switch <id|name>, desktops, plugin-add <name> [ver], plugin <name> <on|off>, plugins, voice <texto>, ai <consulta>, rp-create <name>, rp-list, rp-load <id|name>, alerts-clear, services, startsvc <name>, stopsvc <name>, dev <name> <on|off>, dev-list, drv-list, drv-load <name>, drv-unload <name>, firewall <on|off>, templates, template-add <n> <cpu> <mem> <prio>, template-run <n>, quota <user> <mem>, powersave, jobs, job-add <delay> <cmd>, job-addp <delay> <prio> <cmd>, history, audit, share <file> <on|off>, watchdog <on|off>, svcfail <rate>, suspend <pid>, resume <pid>, netpolicy <low|normal|high>, governor <manual|auto>, role <user> <admin|operator|user>, policies, policy-add <metric> <op> <value> <action>, policy-clear, events, events-clear, namespaces, vmalloc <mb> <flags>, vmprotect <id> <flags>, vmaccess <id> <mode>, vmstat, syscall <name> [...args], secureboot <on|off>, diskenc <on|off>, malware-scan, sandbox <app> <on|off>, net-circuit, prog-list, prog-run <name>, prog-rm <name>, save, load";
     if (cmd === "status") {
       return `profile=${this.profile} scheduler=${this.schedulerMode} cores=${this.coreCount} panic=${this.panicState ? "on" : "off"} maintenance=${this.maintenanceMode ? "on" : "off"} irqDepth=${this.interruptQueue.length} frag=${this.fragmentationLevel}% aging=${this.agingEnabled ? "on" : "off"} swap=${this.swapUsed}/${this.swapTotal} net=${this.networkPolicy} gov=${this.governorMode} policies=${this.policies.length} role=${this.getCurrentRole()} lat=${this.schedulerLatency.avg}/${this.schedulerLatency.peak} circuit=${this.netCircuitOpen ? "open" : "closed"}`;
     }
@@ -1573,6 +1602,8 @@ class OnlineKernel {
     if (cmd === "app-reg") return this.registerCompatibleApp({ name: args[0], minKernel: Number(args[1] || 1), arch: args[2] || "x64", drivers: (args[3] || "").split(",").filter(Boolean), services: (args[4] || "").split(",").filter(Boolean) });
     if (cmd === "store") return `STORE: ${this.appStore.join(", ")}`;
     if (cmd === "store-compatible") return `STOREC: ${this.compatibleStore.join(", ")}`;
+    if (cmd === "ui-mode") return this.setInterfaceMode(args[0]);
+    if (cmd === "ios-setup") return this.setupIOSLikeEnvironment();
     if (cmd === "install-store") return this.installApp(args[0]);
     if (cmd === "services") return this.listServices();
     if (cmd === "startsvc") return this.startService(args[0]);
@@ -1708,6 +1739,7 @@ class OnlineKernel {
       appRegistry: this.appRegistry,
       appProfiles: this.appProfiles,
       compatibleStore: this.compatibleStore,
+      interfaceMode: this.interfaceMode,
       services: this.services,
       healthScore: this.serviceHealthScore(),
       notifications: this.notifications,
@@ -1792,9 +1824,10 @@ function bootstrapUI() {
   let autoTickTimer = null;
 
   function applyTheme(theme) {
-    body.classList.remove("theme-purple", "theme-graphite");
+    body.classList.remove("theme-purple", "theme-graphite", "theme-ios");
     if (theme === "purple") body.classList.add("theme-purple");
     if (theme === "graphite") body.classList.add("theme-graphite");
+    if (theme === "ios") body.classList.add("theme-ios");
   }
 
   function writeLog(message) {
