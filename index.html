@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AmigaOS Kernel Studio</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="os-shell">
+      <header class="menubar">
+        <div class="left-menu">
+          <button id="menuBtn" class="menu-btn">☰ System</button>
+          <span class="menu-item">Workbench</span>
+          <span class="menu-item">Tools</span>
+          <span class="menu-item">Prefs</span>
+        </div>
+        <div class="right-menu">
+          <span class="chip-indicator">CHIP + FAST</span>
+          <select id="profileSelect" class="profile-select">
+            <option value="balanced">Perfil: Balanced</option>
+            <option value="performance">Perfil: Performance</option>
+            <option value="eco">Perfil: Eco</option>
+          </select>
+          <select id="themeSelect" class="profile-select">
+            <option value="ocean">Theme: Ocean</option>
+            <option value="purple">Theme: Purple</option>
+            <option value="graphite">Theme: Graphite</option>
+            <option value="ios">Theme: iOS</option>
+            <option value="ps3">Theme: PS3</option>
+          </select>
+          <span id="clock" class="clock">00:00:00</span>
+        </div>
+      </header>
+
+      <div class="workbench-strip">
+        <span id="wbStatus" class="wb-badge off">WB Offline</span>
+        <span id="panicStatus" class="wb-badge">Panic: OFF</span>
+        <span id="maintenanceStatus" class="wb-badge">Maintenance: OFF</span>
+        <span id="irqDepthBadge" class="wb-badge">IRQ: 0</span>
+      </div>
+
+      <section class="xmb-strip" aria-label="PS3 XMB visual">
+        <div class="xmb-row"><span>📂</span><span>📷</span><span>🎵</span><span>🎬</span><span>🎮</span><span>🌐</span><span>⚙️</span></div>
+        <div class="xmb-wave"></div>
+      </section>
+
+      <main class="desktop">
+        <aside class="dock">
+          <button class="dock-icon" data-focus="kernelWindow">⚙️<span>Kernel</span></button>
+          <button class="dock-icon" data-focus="creatorWindow">🧩<span>Tasks</span></button>
+          <button class="dock-icon" data-focus="monitorWindow">📊<span>Monitor</span></button>
+          <button class="dock-icon" data-focus="insightsWindow">🧠<span>Insights</span></button>
+          <button class="dock-icon" data-focus="sessionWindow">👤<span>Session</span></button>
+          <button class="dock-icon" data-focus="appsWindow">📦<span>Apps</span></button>
+          <button class="dock-icon" data-focus="servicesWindow">🛰️<span>Services</span></button>
+          <button class="dock-icon" data-focus="automationWindow">🤖<span>Automation</span></button>
+          <button class="dock-icon" data-focus="fsWindow">💾<span>Files</span></button>
+          <button class="dock-icon" data-focus="compilerWindow">🧪<span>Compiler</span></button>
+          <button class="dock-icon" data-focus="shellWindow">⌨️<span>Shell</span></button>
+        </aside>
+
+        <section class="workspace">
+          <article class="window" id="kernelWindow">
+            <div class="titlebar"><span>Kernel Control</span><div class="window-controls"><i></i><i></i><i></i></div></div>
+            <div class="window-content">
+              <p class="subtitle">Kernel con perfiles, snapshot, red simulada, diagnósticos y alertas.</p>
+              <div class="control-grid">
+                <button id="bootBtn">Boot</button>
+                <button id="tickBtn" disabled>Tick</button>
+                <button id="autoTickBtn" disabled>Auto Tick</button>
+                <button id="ioBtn" disabled>I/O IRQ</button>
+                <button id="benchBtn" disabled>Benchmark</button>
+                <button id="maintenanceBtn" disabled>Maintenance Off</button>
+                <button id="panicBtn" disabled>Panic</button>
+                <button id="recoverBtn" disabled>Recover</button>
+                <button id="saveBtn" disabled>Save State</button>
+                <button id="loadBtn">Load State</button>
+                <button id="diagBtn" disabled>Export Diag</button>
+                <button id="resetBtn">Reset</button>
+                <button id="clearLogBtn">Clear Log</button>
+              </div>
+              <div class="command-row">
+                <select id="schedulerSelect" class="profile-select" disabled>
+                  <option value="hybrid">Scheduler: Hybrid</option>
+                  <option value="rr">Scheduler: Round Robin</option>
+                  <option value="priority">Scheduler: Priority</option>
+                </select>
+                <select id="coreSelect" class="profile-select" disabled>
+                  <option value="1">Cores: 1</option>
+                  <option value="2" selected>Cores: 2</option>
+                  <option value="4">Cores: 4</option>
+                  <option value="8">Cores: 8</option>
+                </select>
+              </div>
+              <ul id="kernelState" class="state-list"></ul>
+              <div class="metrics">
+                <div><label>Memoria</label><progress id="memBar" max="100" value="0"></progress></div>
+                <div><label>CPU (último tick)</label><progress id="cpuBar" max="100" value="0"></progress></div>
+                <div><label>Net load</label><progress id="netBar" max="100" value="0"></progress></div>
+              </div>
+              <ul id="coreList" class="file-list"></ul>
+              <ul id="irqList" class="file-list"></ul>
+              <ul id="deviceList" class="file-list"></ul>
+              <ul id="notificationList" class="notification-list"></ul>
+            </div>
+          </article>
+
+          <article class="window" id="creatorWindow">
+            <div class="titlebar"><span>Task Creator</span><div class="window-controls"><i></i><i></i><i></i></div></div>
+            <div class="window-content">
+              <form id="processForm" class="form-grid">
+                <label>Nombre<input id="nameInput" type="text" placeholder="shell.task" maxlength="20" /></label>
+                <label>CPU<input id="cpuInput" type="number" min="1" max="60" value="8" /></label>
+                <label>Memoria (MB)<input id="memInput" type="number" min="4" max="512" value="64" /></label>
+                <label>Prioridad<input id="prioInput" type="number" min="1" max="10" value="5" /></label>
+                <div class="control-grid">
+                  <button id="spawnManualBtn" type="submit" disabled>Launch</button>
+                  <button id="spawnAutoBtn" type="button" disabled>Auto Task</button>
+                </div>
+              </form>
+            </div>
+          </article>
+
+          <article class="window" id="monitorWindow">
+            <div class="titlebar"><span>Task & Network Monitor</span><div class="window-controls"><i></i><i></i><i></i></div></div>
+            <div class="window-content">
+              <div id="queueView" class="queue-view"></div>
+              <p id="networkStats" class="mini-status"></p>
+              <table>
+                <thead><tr><th>PID</th><th>Task</th><th>Estado</th><th>CPU</th><th>Mem</th><th>Prio</th><th>I/O</th><th>Acción</th></tr></thead>
+                <tbody id="processTable"></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="window" id="insightsWindow">
+            <div class="titlebar"><span>Insights</span><div class="window-controls"><i></i><i></i><i></i></div></div>
+            <div class="window-content">
+              <p id="insightsSummary" class="mini-status">Sin datos.</p>
+              <ul id="topList" class="file-list"></ul>
+            </div>
+          </article>
+
+          <article class="window" id="sessionWindow">
+            <div class="titlebar"><span>Users & Session</span><div class="window-controls"><i></i><i></i><i></i></div></div>
+            <div class="window-content">
+              <form id="loginForm" class="command-row">
+                <input id="loginInput" type="text" placeholder="nombre de usuario" />
+                <button id="loginBtn" type="submit">Login</button>
+              </form>
+              <div class="control-grid">
+                <button id="logoutBtn" disabled>Logout</button>
+              </div>
+              <p id="sessionInfo" class="mini-status"></p>
+            </div>
+          </article>
+
+          <article class="window" id="appsWindow">
+            <div class="titlebar"><span>App Manager</span><div class="window-controls"><i></i><i></i><i></i></div></div>
+            <div class="window-content">
+              <form id="appForm" class="command-row">
+                <input id="appInput" type="text" placeholder="paint.app" />
+                <button id="installAppBtn" type="submit" disabled>Install</button>
+              </form>
+              <ul id="appsList" class="file-list"></ul>
+            </div>
+          </article>
+
+
+          <article class="window" id="servicesWindow">
+            <div class="titlebar"><span>Service Manager</span><div class="window-controls"><i></i><i></i><i></i></div></div>
+            <div class="window-content">
+              <form id="serviceForm" class="command-row">
+                <input id="serviceInput" type="text" placeholder="net.service" />
+                <button id="startServiceBtn" type="submit" disabled>Start Service</button>
+              </form>
+              <ul id="servicesList" class="file-list"></ul>
+            </div>
+          </article>
+
+
+          <article class="window" id="automationWindow">
+            <div class="titlebar"><span>Automation & Security</span><div class="window-controls"><i></i><i></i><i></i></div></div>
+            <div class="window-content">
+              <form id="templateForm" class="form-grid">
+                <label>Template<input id="templateNameInput" type="text" placeholder="web.worker" /></label>
+                <label>CPU<input id="templateCpuInput" type="number" min="1" max="60" value="10" /></label>
+                <label>Mem<input id="templateMemInput" type="number" min="4" max="512" value="48" /></label>
+                <label>Prio<input id="templatePrioInput" type="number" min="1" max="10" value="6" /></label>
+                <div class="control-grid">
+                  <button id="saveTemplateBtn" type="submit" disabled>Save Template</button>
+                  <button id="runTemplateBtn" type="button" disabled>Run Template</button>
+                  <button id="toggleFirewallBtn" type="button" disabled>Firewall Off</button>
+                  <button id="addJobBtn" type="button" disabled>Add Job +5t</button>
+                </div>
+              </form>
+              <p id="securityInfo" class="mini-status"></p>
+              <form id="quotaForm" class="command-row">
+                <input id="quotaUserInput" type="text" placeholder="usuario" />
+                <input id="quotaMemInput" type="number" min="32" max="4096" value="256" />
+                <button id="setQuotaBtn" type="submit" disabled>Set Quota</button>
+              </form>
+              <div class="control-grid">
+                <button id="togglePowerSaveBtn" type="button" disabled>PowerSave Off</button>
+              </div>
+              <p id="powerInfo" class="mini-status"></p>
+              <ul id="templateList" class="file-list"></ul>
+              <ul id="jobList" class="file-list"></ul>
+            </div>
+          </article>
+
+          <article class="window" id="fsWindow">
+            <div class="titlebar"><span>Virtual FileSystem</span><div class="window-controls"><i></i><i></i><i></i></div></div>
+            <div class="window-content">
+              <form id="fileForm" class="form-grid">
+                <label>Archivo<input id="fileNameInput" type="text" placeholder="notes.txt" maxlength="40" /></label>
+                <label>Contenido<input id="fileContentInput" type="text" placeholder="hola amiga" maxlength="120" /></label>
+                <div class="control-grid">
+                  <button id="createFileBtn" type="submit" disabled>Write File</button>
+                  <button id="refreshFsBtn" type="button">Refresh</button>
+                </div>
+              </form>
+              <ul id="fileList" class="file-list"></ul>
+            </div>
+          </article>
+
+          <article class="window" id="visualWindow">
+            <div class="titlebar"><span>Workbench Visual</span><div class="window-controls"><i></i><i></i><i></i></div></div>
+            <div class="window-content">
+              <div class="control-grid">
+                <button id="toggleScanBtn">CRT Scanlines</button>
+                <button id="toggleGlowBtn">Neon Glow</button>
+                <button id="cascadeBtn">Cascade Windows</button>
+              </div>
+              <p class="mini-status">Ajusta el look retro AmigaOS del escritorio.</p>
+            </div>
+          </article>
+
+
+          <article class="window" id="compilerWindow">
+            <div class="titlebar"><span>Internal Compiler</span><div class="window-controls"><i></i><i></i><i></i></div></div>
+            <div class="window-content">
+              <p class="subtitle">Compila scripts fáciles para programar el kernel desde la interfaz AmigaOS.</p>
+              <form id="compilerForm" class="form-grid">
+                <label>Programa<input id="compilerNameInput" type="text" placeholder="boot.script" maxlength="40" /></label>
+                <label>Script
+                  <textarea id="compilerInput" rows="7" placeholder="# Comandos soportados:
+# CMD <shell command>
+# SPAWN <name> <cpu> <mem> <prio>
+# WRITE <file> <content>
+# WAIT <ticks>"></textarea>
+                </label>
+                <div class="control-grid">
+                  <button id="compileProgramBtn" type="submit" disabled>Compile</button>
+                  <button id="runProgramBtn" type="button" disabled>Run Program</button>
+                  <button id="loadSampleCompilerBtn" type="button">Load Sample</button>
+                </div>
+              </form>
+              <ul id="programList" class="file-list"></ul>
+            </div>
+          </article>
+
+          <article class="window" id="shellWindow">
+            <div class="titlebar"><span>Amiga Shell</span><div class="window-controls"><i></i><i></i><i></i></div></div>
+            <div class="window-content">
+              <pre id="log"></pre>
+              <form id="commandForm" class="command-row">
+                <input id="commandInput" type="text" placeholder="help | audit | firewall on | template-add w 8 32 5 | template-run w" />
+                <button id="runCmdBtn" type="submit">Run</button>
+              </form>
+            </div>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script src="kernel.js"></script>
+  </body>
+</html>
