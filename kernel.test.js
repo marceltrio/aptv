@@ -668,3 +668,23 @@ test("snapshot conserva interfaceMode y iosCompatibleApps", () => {
   assert.equal(k2.interfaceMode, "ios");
   assert.equal(k2.iosCompatibleApps.includes("safari.app"), true);
 });
+
+test("ps3-setup habilita modo ps3 e instala apps xmb", () => {
+  const k = new OnlineKernel();
+  k.boot();
+  const out = k.executeCommand("ps3-setup");
+  assert.match(out, /PS3 XMB-like/);
+  assert.equal(k.interfaceMode, "ps3");
+  assert.equal(k.apps.includes("xmb.shell"), true);
+});
+
+test("ui-mode ps3 funciona y snapshot conserva ps3CompatibleApps", () => {
+  const k1 = new OnlineKernel();
+  k1.boot();
+  assert.match(k1.executeCommand("ui-mode ps3"), /PS3/);
+  const snap = k1.saveSnapshot();
+  const k2 = new OnlineKernel();
+  k2.loadSnapshot(snap);
+  assert.equal(k2.interfaceMode, "ps3");
+  assert.equal(k2.ps3CompatibleApps.includes("game.center"), true);
+});

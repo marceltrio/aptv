@@ -38,6 +38,7 @@ Simulador web del kernel con interfaz gráfica estilo AmigaOS, ahora con más m�
 - **NUEVO** capa de compatibilidad de aplicaciones x64 (`app-reg`, `app-compat`, `app-run`) con validación de drivers/servicios.
 - **NUEVO** gestor de bundles compatibles (`app-installc`, `app-info`, `uninstall`, `store-compatible`) con perfil de ejecución.
 - **NUEVO** modo visual y operativo iOS-like (`ui-mode ios`, `ios-setup`) con apps base tipo Springboard/Safari/Notes.
+- **NUEVO** modo radical PS3 XMB-like (`ui-mode ps3`, `ps3-setup`, Theme: PS3) con apps multimedia/gaming.
 
 ## Comandos de Shell
 
@@ -49,7 +50,7 @@ Simulador web del kernel con interfaz gráfica estilo AmigaOS, ahora con más m�
 - Automatización: `templates`, `template-add <n> <cpu> <mem> <prio>`, `template-run <n>`, `jobs`, `job-add <delay> <cmd>`, `job-addp <delay> <prio> <cmd>`, `history`, `policies`, `policy-add <metric> <op> <value> <action>`, `policy-clear`, `prog-list`, `prog-run <name>`, `prog-rm <name>`
 - Usuarios/energía: `whoami`, `login <usuario>`, `logout`, `role <user> <admin|operator|user>`, `quota <usuario> <mem>`, `namespaces`, `powersave`
 - Apps/FS: `apps`, `install <app>`, `store`, `install-store <app>`, `ls`, `cat <file> [key]`, `write <file> <texto>`, `writec <file> <texto>`, `writee <file> <key> <texto>`, `rm <file>`, `mkdir <path>`, `chmod <file> <owner> <others>`, `share <file> <on|off>`, `fs-journal`, `fs-root`, `fs-tree`, `fsck [repair]`
-- Productividad moderna: `desktop-add <name>`, `desktop-switch <id|name>`, `desktops`, `plugin-add <name> [ver]`, `plugin <name> <on|off>`, `plugins`, `voice <texto>`, `ai <consulta>`, `rp-create <name>`, `rp-list`, `rp-load <id|name>`, `app-reg <name> <minKernel> <arch> <driversCSV> <servicesCSV>`, `app-compat <app>`, `app-run <app>`, `app-installc <app> [profile]`, `app-info <app>`, `uninstall <app>`, `store-compatible`, `ui-mode <amiga|ios>`, `ios-setup`
+- Productividad moderna: `desktop-add <name>`, `desktop-switch <id|name>`, `desktops`, `plugin-add <name> [ver]`, `plugin <name> <on|off>`, `plugins`, `voice <texto>`, `ai <consulta>`, `rp-create <name>`, `rp-list`, `rp-load <id|name>`, `app-reg <name> <minKernel> <arch> <driversCSV> <servicesCSV>`, `app-compat <app>`, `app-run <app>`, `app-installc <app> [profile]`, `app-info <app>`, `uninstall <app>`, `store-compatible`, `ui-mode <amiga|ios|ps3>`, `ios-setup`, `ps3-setup`
 - Drivers/hardware: `dev-list`, `dev <name> <on|off>`, `drv-list`, `drv-load <name>`, `drv-unload <name>`
 - Memoria virtual/system calls: `vmalloc <mb> <flags>`, `vmprotect <id> <flags>`, `vmaccess <id> <mode>`, `vmstat`, `syscall <name> [...args]`
 - Seguridad: `secureboot <on|off>`, `diskenc <on|off>`, `malware-scan`, `sandbox <app> <on|off>`

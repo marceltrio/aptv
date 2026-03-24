@@ -40,6 +40,7 @@ class OnlineKernel {
     this.appStore = ["paint.app", "music.app", "files.app", "sysguard.app"];
     this.compatibleStore = ["studio.app", "nettools.app", "files.app", "sec.audit.app"];
     this.iosCompatibleApps = ["springboard.app", "safari.app", "messages.app", "notes.app", "photos.app"];
+    this.ps3CompatibleApps = ["xmb.shell", "video.player", "music.player", "game.center", "network.browser"];
     this.updateCatalog = ["kernel.core", "scheduler.pack", "security.patch", "arkrfs.tools"];
     this.availableUpdates = [];
     this.virtualDesktops = [{ id: 1, name: "Main", apps: [] }];
@@ -1025,7 +1026,21 @@ class OnlineKernel {
       { name: "safari.app", minKernel: 1, arch: "x64", drivers: ["e1000", "virtio-gpu"], services: ["net.service"] },
       { name: "messages.app", minKernel: 1, arch: "x64", drivers: ["e1000"], services: ["net.service"] },
       { name: "notes.app", minKernel: 1, arch: "x64", drivers: [], services: ["fs.service"] },
+      { name: "xmb.shell", minKernel: 1, arch: "x64", drivers: ["virtio-gpu"], services: [] },
+      { name: "video.player", minKernel: 1, arch: "x64", drivers: ["virtio-gpu"], services: ["fs.service"] },
+      { name: "music.player", minKernel: 1, arch: "x64", drivers: ["hda"], services: ["fs.service"] },
+      { name: "game.center", minKernel: 1, arch: "x64", drivers: ["virtio-gpu", "hda"], services: [] },
+      { name: "network.browser", minKernel: 1, arch: "x64", drivers: ["e1000", "virtio-gpu"], services: ["net.service"] },
     ].forEach((pkg) => this.registerCompatibleApp(pkg));
+  }
+
+  setupPS3LikeEnvironment() {
+    this.interfaceMode = "ps3";
+    this.ps3CompatibleApps.forEach((app) => {
+      if (this.appRegistry.some((a) => a.name === app)) this.installCompatibleBundle(app, "xmb");
+    });
+    this.notify("PS3 XMB-like mode activado", "ok");
+    return "UI: modo PS3 XMB-like activado.";
   }
 
   setupIOSLikeEnvironment() {
@@ -1039,8 +1054,9 @@ class OnlineKernel {
 
   setInterfaceMode(mode = "amiga") {
     const safe = String(mode || "amiga").trim().toLowerCase();
-    if (!["amiga", "ios"].includes(safe)) return "ERR: modo UI inválido.";
+    if (!["amiga", "ios", "ps3"].includes(safe)) return "ERR: modo UI inválido.";
     if (safe === "ios") return this.setupIOSLikeEnvironment();
+    if (safe === "ps3") return this.setupPS3LikeEnvironment();
     this.interfaceMode = "amiga";
     return "UI: modo Amiga activado.";
   }
@@ -1408,6 +1424,7 @@ class OnlineKernel {
       appProfiles: state.appProfiles,
       compatibleStore: state.compatibleStore,
       interfaceMode: state.interfaceMode,
+      ps3CompatibleApps: state.ps3CompatibleApps,
     };
   }
 
@@ -1446,6 +1463,7 @@ class OnlineKernel {
       appProfiles: this.appProfiles,
       compatibleStore: this.compatibleStore,
       iosCompatibleApps: this.iosCompatibleApps,
+      ps3CompatibleApps: this.ps3CompatibleApps,
       services: this.services,
       network: this.network,
       benchmarkHistory: this.benchmarkHistory,
@@ -1510,6 +1528,7 @@ class OnlineKernel {
       this.appProfiles = data.appProfiles && typeof data.appProfiles === "object" ? data.appProfiles : {};
       this.compatibleStore = Array.isArray(data.compatibleStore) ? data.compatibleStore : ["studio.app", "nettools.app", "files.app", "sec.audit.app"];
       this.iosCompatibleApps = Array.isArray(data.iosCompatibleApps) ? data.iosCompatibleApps : ["springboard.app", "safari.app", "messages.app", "notes.app", "photos.app"];
+      this.ps3CompatibleApps = Array.isArray(data.ps3CompatibleApps) ? data.ps3CompatibleApps : ["xmb.shell", "video.player", "music.player", "game.center", "network.browser"];
       this.services = Array.isArray(data.services) ? data.services : [];
       this.network = data.network || { packetsSent: 0, packetsDropped: 0, load: 0 };
       this.benchmarkHistory = Array.isArray(data.benchmarkHistory) ? data.benchmarkHistory : [];
@@ -1567,7 +1586,7 @@ class OnlineKernel {
       this.commandHistory = this.commandHistory.slice(0, 100);
     }
 
-    if (cmd === "help") return "help, status, ps, top, bench <n>, tick, io, irq <type> <source> <prio>, irq-list, netstat, uptime, kill <pid>, profile <eco|balanced|performance>, scheduler <hybrid|rr|priority>, cores <n>, aging <on|off>, compact, maintenance, panic <reason>, recover, whoami, login <user>, logout, apps, install <app>, uninstall <app>, app-run <app>, app-compat <app>, app-info <app>, app-installc <app> [profile], app-reg <name> <minKernel> <arch> <driversCSV> <servicesCSV>, store, store-compatible, ui-mode <amiga|ios>, ios-setup, install-store <app>, ls, cat <file> [key], write <file> <txt>, writec <file> <txt>, writee <file> <key> <txt>, rm <file>, mkdir <path>, chmod <file> <owner> <others>, fs-journal, fs-root, fs-tree, fsck [repair], updates, update <name|all>, desktop-add <name>, desktop-switch <id|name>, desktops, plugin-add <name> [ver], plugin <name> <on|off>, plugins, voice <texto>, ai <consulta>, rp-create <name>, rp-list, rp-load <id|name>, alerts-clear, services, startsvc <name>, stopsvc <name>, dev <name> <on|off>, dev-list, drv-list, drv-load <name>, drv-unload <name>, firewall <on|off>, templates, template-add <n> <cpu> <mem> <prio>, template-run <n>, quota <user> <mem>, powersave, jobs, job-add <delay> <cmd>, job-addp <delay> <prio> <cmd>, history, audit, share <file> <on|off>, watchdog <on|off>, svcfail <rate>, suspend <pid>, resume <pid>, netpolicy <low|normal|high>, governor <manual|auto>, role <user> <admin|operator|user>, policies, policy-add <metric> <op> <value> <action>, policy-clear, events, events-clear, namespaces, vmalloc <mb> <flags>, vmprotect <id> <flags>, vmaccess <id> <mode>, vmstat, syscall <name> [...args], secureboot <on|off>, diskenc <on|off>, malware-scan, sandbox <app> <on|off>, net-circuit, prog-list, prog-run <name>, prog-rm <name>, save, load";
+    if (cmd === "help") return "help, status, ps, top, bench <n>, tick, io, irq <type> <source> <prio>, irq-list, netstat, uptime, kill <pid>, profile <eco|balanced|performance>, scheduler <hybrid|rr|priority>, cores <n>, aging <on|off>, compact, maintenance, panic <reason>, recover, whoami, login <user>, logout, apps, install <app>, uninstall <app>, app-run <app>, app-compat <app>, app-info <app>, app-installc <app> [profile], app-reg <name> <minKernel> <arch> <driversCSV> <servicesCSV>, store, store-compatible, ui-mode <amiga|ios|ps3>, ios-setup, ps3-setup, install-store <app>, ls, cat <file> [key], write <file> <txt>, writec <file> <txt>, writee <file> <key> <txt>, rm <file>, mkdir <path>, chmod <file> <owner> <others>, fs-journal, fs-root, fs-tree, fsck [repair], updates, update <name|all>, desktop-add <name>, desktop-switch <id|name>, desktops, plugin-add <name> [ver], plugin <name> <on|off>, plugins, voice <texto>, ai <consulta>, rp-create <name>, rp-list, rp-load <id|name>, alerts-clear, services, startsvc <name>, stopsvc <name>, dev <name> <on|off>, dev-list, drv-list, drv-load <name>, drv-unload <name>, firewall <on|off>, templates, template-add <n> <cpu> <mem> <prio>, template-run <n>, quota <user> <mem>, powersave, jobs, job-add <delay> <cmd>, job-addp <delay> <prio> <cmd>, history, audit, share <file> <on|off>, watchdog <on|off>, svcfail <rate>, suspend <pid>, resume <pid>, netpolicy <low|normal|high>, governor <manual|auto>, role <user> <admin|operator|user>, policies, policy-add <metric> <op> <value> <action>, policy-clear, events, events-clear, namespaces, vmalloc <mb> <flags>, vmprotect <id> <flags>, vmaccess <id> <mode>, vmstat, syscall <name> [...args], secureboot <on|off>, diskenc <on|off>, malware-scan, sandbox <app> <on|off>, net-circuit, prog-list, prog-run <name>, prog-rm <name>, save, load";
     if (cmd === "status") {
       return `profile=${this.profile} scheduler=${this.schedulerMode} cores=${this.coreCount} panic=${this.panicState ? "on" : "off"} maintenance=${this.maintenanceMode ? "on" : "off"} irqDepth=${this.interruptQueue.length} frag=${this.fragmentationLevel}% aging=${this.agingEnabled ? "on" : "off"} swap=${this.swapUsed}/${this.swapTotal} net=${this.networkPolicy} gov=${this.governorMode} policies=${this.policies.length} role=${this.getCurrentRole()} lat=${this.schedulerLatency.avg}/${this.schedulerLatency.peak} circuit=${this.netCircuitOpen ? "open" : "closed"}`;
     }
@@ -1604,6 +1623,7 @@ class OnlineKernel {
     if (cmd === "store-compatible") return `STOREC: ${this.compatibleStore.join(", ")}`;
     if (cmd === "ui-mode") return this.setInterfaceMode(args[0]);
     if (cmd === "ios-setup") return this.setupIOSLikeEnvironment();
+    if (cmd === "ps3-setup") return this.setupPS3LikeEnvironment();
     if (cmd === "install-store") return this.installApp(args[0]);
     if (cmd === "services") return this.listServices();
     if (cmd === "startsvc") return this.startService(args[0]);
@@ -1740,6 +1760,7 @@ class OnlineKernel {
       appProfiles: this.appProfiles,
       compatibleStore: this.compatibleStore,
       interfaceMode: this.interfaceMode,
+      ps3CompatibleApps: this.ps3CompatibleApps,
       services: this.services,
       healthScore: this.serviceHealthScore(),
       notifications: this.notifications,
@@ -1824,10 +1845,11 @@ function bootstrapUI() {
   let autoTickTimer = null;
 
   function applyTheme(theme) {
-    body.classList.remove("theme-purple", "theme-graphite", "theme-ios");
+    body.classList.remove("theme-purple", "theme-graphite", "theme-ios", "theme-ps3");
     if (theme === "purple") body.classList.add("theme-purple");
     if (theme === "graphite") body.classList.add("theme-graphite");
     if (theme === "ios") body.classList.add("theme-ios");
+    if (theme === "ps3") body.classList.add("theme-ps3");
   }
 
   function writeLog(message) {
